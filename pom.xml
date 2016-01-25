@@ -58,7 +58,7 @@
                     <configuration>
                         <archive>
                             <manifest>
-                                <mainClass>Agent</mainClass>
+                                <mainClass>ossus.agent.Agent</mainClass>
                             </manifest>
                         </archive>
                         <descriptorRefs>

@@ -52,8 +52,8 @@ public class BackupJob {
 
     private void addSchedules(List<JSONObject> schedules) throws ParseException, OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
         for (Object o : schedules) {
-            machine.log_info("Adding schedule: " + o.toString());
             JSONObject obj = (JSONObject) o;
+            machine.log_info("Adding schedule: " + obj.get("name").toString());
             Schedule schedule = new Schedule();
             schedule.setId(obj.get("id").toString());
             schedule.setName(obj.get("name").toString());
@@ -112,7 +112,7 @@ public class BackupJob {
             machine.log_warning("No schedules to run, have you set up any?");
         } else {
             for (Schedule schedule : this.schedules) {
-                machine.log_error("Checking checdule " + schedule.getName());
+                machine.log_info("Checking if job scheduled to run: " + schedule.getName());
                 if (new Date().after(schedule.get_next_backup_time())) {
                     machine.log_info("Running schedule " + schedule.getName());
 

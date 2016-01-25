@@ -49,13 +49,7 @@ public class Agent {
             System.exit(1);
         }
 
-        if (machine == null) {
-            System.out.println("Failed to load settings and build machine object");
-            System.exit(1);
-        }
-
         return machine;
-
     }
 
 

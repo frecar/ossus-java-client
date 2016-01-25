@@ -1,11 +1,12 @@
 package ossus.agent;
 
+import it.sauronsoftware.ftp4j.*;
 import ossus.commons.Machine;
-import it.sauronsoftware.ftp4j.FTPClient;
 import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
 import ossus.commons.exceptions.OSSUSNoFTPServerConnection;
 
 import java.io.File;
+import java.io.IOException;
 
 public class FTPStorage {
     FTPClient client;
@@ -67,7 +68,8 @@ public class FTPStorage {
         }
     }
 
-    public void upload(String destination, String local_file, int restart_attempts) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
+    public void upload(String destination, String local_file, int restart_attempts)
+            throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
         int max_restart_attempts = 3;
 
         try {
@@ -80,7 +82,7 @@ public class FTPStorage {
             if (restart_attempts > max_restart_attempts) {
                 this.machine.log_error("Aborting FTP upload");
                 this.machine.log_error("Attempted to start upload more than " + max_restart_attempts + " times");
-                System.exit(1);
+                throw new OSSUSNoFTPServerConnection("No connection to FTP server");
             }
 
             this.createFolder(destination);
@@ -106,7 +108,8 @@ public class FTPStorage {
                 this.client.upload(file, listener);
             }
 
-        } catch (Exception e) {
+        } catch (FTPIllegalReplyException |
+                FTPException | FTPDataTransferException | FTPAbortedException | IOException e) {
 
             this.machine.log_error(e.getMessage());
             this.machine.log_warning("Restarting upload in 10 seconds");
