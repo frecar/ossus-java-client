@@ -6,4 +6,3 @@ tasks:
  - mvn -B -q checkstyle:check
  - mvn -B -q pmd:check -Dpmd.printFailingErrors=true
  - mvn -B -q findbugs:check
- - mvn -B test
