@@ -86,7 +86,7 @@ public class FTPStorage {
             this.createFolder(destination);
             this.client.changeDirectory(destination);
 
-            File file = new java.io.File(local_file);
+            File file = new File(local_file);
             MyTransferListener listener = new MyTransferListener(this.machine, this.client, file.length());
 
             if (restart_attempts >= 1 && this.client.isResumeSupported()) {

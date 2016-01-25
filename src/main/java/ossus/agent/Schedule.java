@@ -19,6 +19,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 
+import static java.lang.Thread.sleep;
+
 
 public class Schedule {
 
@@ -185,14 +187,12 @@ public class Schedule {
             f.mkdirs();
             if (sqlBackup.getType().equals("mysql")) {
                 filename_backup_zip = folder_zip + sqlBackup.getDatabase() + ".sql";
-                String executeCmd = "";
+                String executeCmd;
 
                 //Delete old sql file if exists
                 File file_bak = new File(filename_backup_zip);
-                if (file_bak.exists()) {
-                    if (!file_bak.delete()) {
-                        machine.log_error("Error deleting old sql file");
-                    }
+                if (file_bak.exists() && !file_bak.delete()) {
+                    machine.log_error("Error deleting old sql file");
                 }
 
                 executeCmd = this.machine.mysql_dump + " --single-transaction --user='" + sqlBackup.getUsername() + "' --host='" + sqlBackup.getHost() + "' --password='" + sqlBackup.getPassword() + "' " + sqlBackup.getDatabase() + " > " + filename_backup_zip;
@@ -203,10 +203,8 @@ public class Schedule {
 
                 //Delete old bak file if exists
                 File file_bak = new File(filename_backup_zip);
-                if (file_bak.exists()) {
-                    if (!file_bak.delete()) {
-                        machine.log_error("Error deleting old bak file");
-                    }
+                if (file_bak.exists() && !file_bak.delete()) {
+                    machine.log_error("Error deleting old bak file");
                 }
 
                 Connection conn;
@@ -279,7 +277,9 @@ public class Schedule {
             Process process = runtime.exec(new String[]{"/bin/bash", "-c", cmd});
             //int exitValue = process.waitFor();
             BufferedReader buf = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            while ((buf.readLine()) != null) {};
+            while (buf.readLine() != null) {
+                sleep(1);
+            }
         } catch (Exception e) {
             this.machine.log_error(e.getMessage());
         }

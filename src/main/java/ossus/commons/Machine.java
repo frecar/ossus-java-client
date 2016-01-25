@@ -5,11 +5,13 @@ import org.json.simple.parser.JSONParser;
 import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
+
 
 public class Machine {
 
@@ -48,7 +50,8 @@ public class Machine {
         this.mysql_dump = settings.get("mysql_dump");
         this.agent_folder = settings.get("agent_folder");
         this.local_temp_folder = settings.get("local_temp_folder");
-        this.session = (System.currentTimeMillis() / 1000) + new Random().nextInt(150);
+        this.session = System.currentTimeMillis() / 1000;
+        this.session = this.session + new Random().nextInt(150);
 
         apiHandler = new APIHandler(this.server_ip + "/api/", api_user, api_token);
 

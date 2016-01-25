@@ -60,25 +60,15 @@ public class Zipper {
         return true;
     }
 
-    /**
-     * * Recursive traversal to add files
-     * *
-     * * @param root
-     * * @param file
-     * * @param zaos
-     * * @param absolute
-     * * @throws IOException
-     */
     private static void recurseFiles(File root, File file, ZipArchiveOutputStream zaos,
                                      boolean absolute) throws IOException {
         if (file.isDirectory()) {
-            // recursive call
             File[] files = file.listFiles();
             for (File file2 : files) {
                 recurseFiles(root, file2, zaos, absolute);
             }
-        } else if ((!file.getName().endsWith(".zip")) && (!file.getName().endsWith(".ZIP"))) {
-            String filename = null;
+        } else if (!file.getName().endsWith(".zip") && !file.getName().endsWith(".ZIP")) {
+            String filename;
             if (absolute) {
                 filename = file.getAbsolutePath().substring(root.getAbsolutePath().length());
             } else {

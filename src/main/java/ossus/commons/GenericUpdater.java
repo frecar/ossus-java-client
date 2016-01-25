@@ -36,8 +36,7 @@ abstract public class GenericUpdater {
 
     public void run() throws OSSUSNoAPIConnectionException {
 
-
-        if (!machine.auto_update && (current_version().equals(selected_version()))) {
+        if (!machine.auto_update && current_version().equals(selected_version())) {
             return;
         }
 

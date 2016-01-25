@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static java.lang.Thread.sleep;
+
 public class APIHandler {
 
     private String base_url;
@@ -60,10 +62,11 @@ public class APIHandler {
             wr.write(data);
             wr.flush();
 
-            InputStream content = (InputStream) connection.getInputStream();
+            InputStream content = connection.getInputStream();
             BufferedReader in = new BufferedReader(new InputStreamReader(content));
 
             while (in.readLine() != null) {
+                sleep(1);
             }
 
         } catch (Exception e) {
