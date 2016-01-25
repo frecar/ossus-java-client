@@ -1,9 +1,6 @@
-setup_tasks:
- - mvn -B -q versions:display-dependency-updates
- - mvn -B -q clean install -DskipTests=true
-
 tasks:
- - mvn -B -q checkstyle:check
- - mvn -B -q pmd:check -Dpmd.printFailingErrors=true
- - mvn -B -q findbugs:check
- - mvn test
+ - mvn -T 2C -B install
+ - mvn -T 2C -B -q checkstyle:check
+ - mvn -T 2C -B pmd:check -Dpmd.printFailingErrors=true
+ - mvn -T 2C -B findbugs:check
+ - mvn -T 2C -B test
