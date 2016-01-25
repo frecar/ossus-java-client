@@ -137,9 +137,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.kie.modules</groupId>
-            <artifactId>org-apache-commons-compress</artifactId>
-            <version>6.3.0.Final</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.10</version>
         </dependency>
 
     </dependencies>
