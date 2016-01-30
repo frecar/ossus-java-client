@@ -31,7 +31,7 @@ public enum ApiTrans {
     SCHEDULE_CURRENT_VERSION_IN_LOOP("current_version_in_loop"),
     SCHEDULE_ID("id"),
     SCHEDULE_VERSIONS_COUNT("versions_count"),
-    SCHEDULE_GET_NEXT_BACKUP_TIME("getNextBackupTime"),
+    SCHEDULE_GET_NEXT_BACKUP_TIME("get_next_backup_time"),
     SCHEDULE_RUNNING_RESTORE("running_restore"),
     SCHEDULE_RUNNING_BACKUP("running_backup"),
     SCHEDULE_FOLDER_BACKUPS("folder_backups"),
