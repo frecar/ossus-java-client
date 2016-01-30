@@ -1,11 +1,11 @@
-package ossus.agent;
+package agent;
 
 import java.util.Date;
 
-import ossus.commons.Machine;
+import commons.Machine;
 import it.sauronsoftware.ftp4j.FTPClient;
 import it.sauronsoftware.ftp4j.FTPDataTransferListener;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 public class MyTransferListener implements FTPDataTransferListener {
 

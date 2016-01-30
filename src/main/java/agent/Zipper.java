@@ -1,10 +1,10 @@
-package ossus.agent;
+package agent;
 
-import ossus.commons.Machine;
+import commons.Machine;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.*;
 

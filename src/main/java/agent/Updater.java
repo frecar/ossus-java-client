@@ -1,9 +1,9 @@
-package ossus.agent;
+package agent;
 
-import ossus.commons.GenericUpdater;
-import ossus.commons.Machine;
-import ossus.commons.Version;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.GenericUpdater;
+import commons.Machine;
+import commons.Version;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -39,7 +39,7 @@ public class Updater extends GenericUpdater {
     @Override
     protected URL download_link(Version v) throws OSSUSNoAPIConnectionException {
         try {
-            return new URL(v.updater_link);
+            return new URL(v.updaterLink);
         } catch (MalformedURLException e) {
             machine.log_error(e.toString());
             return null;

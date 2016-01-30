@@ -1,6 +1,6 @@
-package ossus.commons;
+package commons;
 
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.util.HashMap;
 
@@ -9,7 +9,7 @@ public class Log {
 	APIHandler apiHandler;
 	String id;
 
-    private static enum LogLevel {
+    private enum LogLevel {
         INFO("info"), ERROR("error"), WARNING("warning");
         String str;
         LogLevel(String str) {

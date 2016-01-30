@@ -1,8 +1,8 @@
-package ossus.commons;
+package commons;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.*;
 import java.net.URL;
@@ -76,10 +76,10 @@ public class Machine {
         List<JSONObject> obj = apiHandler.get_api_data("machines/" + this.id);
         JSONObject data = (JSONObject) obj.get(0).get("machine");
 
-        this.current_agent_version = Version.buildFromJson((JSONObject) data.get("current_agent_version"), this); //(String) ((JSONObject) data.get("current_agent_version")).get("name");
-        this.selected_agent_version = Version.buildFromJson((JSONObject) data.get("selected_agent_version"), this);
-        this.current_updater_version = Version.buildFromJson((JSONObject) data.get("current_updater_version"), this);
-        this.selected_updater_version = Version.buildFromJson((JSONObject) data.get("selected_updater_version"), this);
+        this.current_agent_version = Version.buildFromJson((JSONObject) data.get("current_agent_version"));
+        this.selected_agent_version = Version.buildFromJson((JSONObject) data.get("selected_agent_version"));
+        this.current_updater_version = Version.buildFromJson((JSONObject) data.get("current_updater_version"));
+        this.selected_updater_version = Version.buildFromJson((JSONObject) data.get("selected_updater_version"));
 
         this.auto_update = (Boolean) data.get("auto_update");
         this.run_install = (Boolean) data.get("run_install");
@@ -142,7 +142,6 @@ public class Machine {
         List<JSONObject> s = apiHandler.get_api_data(agent_url);
 
         return (Boolean) s.get(0).get("changed_status");
-
     }
 
     public void set_current_agent_version(Version current_agent_version) {

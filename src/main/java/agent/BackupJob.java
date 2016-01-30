@@ -1,10 +1,10 @@
-package ossus.agent;
+package agent;
 
-import ossus.commons.Machine;
+import commons.Machine;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
-import ossus.commons.exceptions.OSSUSNoFTPServerConnection;
+import commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoFTPServerConnection;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -45,7 +45,7 @@ public class BackupJob {
 
             addSchedules(schedules);
         } catch (ParseException e) {
-            machine.log_error("Error getting schedules:\n" + e.toString());
+            machine.log_error("Error getting schedules:\n" + e.getMessage());
         }
     }
 
@@ -117,7 +117,6 @@ public class BackupJob {
                     machine.log_info("Running schedule " + schedule.getName());
 
                     if (!schedule.getRunning_backup()) {
-
                         schedule.setRunning_backup(true);
                         schedule.save();
 
@@ -131,6 +130,8 @@ public class BackupJob {
                         schedule.setRunning_backup(false);
                         schedule.save();
 
+                    } else {
+                        machine.log_error("This schedule is already running!");
                     }
                 }
             }

@@ -1,8 +1,8 @@
-package ossus.agent;
+package agent;
 
-import ossus.commons.Machine;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
-import ossus.commons.exceptions.OSSUSNoFTPServerConnection;
+import commons.Machine;
+import commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoFTPServerConnection;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

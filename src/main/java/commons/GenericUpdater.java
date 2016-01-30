@@ -1,7 +1,7 @@
-package ossus.commons;
+package commons;
 
 import org.json.simple.JSONObject;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 /*
     TODO: The server could send information saying wheter teh version running is the newest/current or not, together
@@ -36,12 +36,14 @@ abstract public class GenericUpdater {
 
     public void run() throws OSSUSNoAPIConnectionException {
 
-        if (!machine.auto_update && current_version().equals(selected_version())) {
-            return;
-        }
-
         machine.log_info("Fetching version information from server");
         Version selected = getSelectedVersion();
+
+        if (!machine.auto_update && current_version().equals(selected_version())) {
+            machine.log_info("This machine is set to not auto update");
+            machine.log_info("This machine is running the selected version " + selected_version());
+            return;
+        }
 
         if (selected == null) {
             machine.log_error("Failed to fetch version information");
@@ -73,7 +75,7 @@ abstract public class GenericUpdater {
         }
 
         JSONObject version_data = (JSONObject) json_data.get(0).get("client_version");
-        return Version.buildFromJson(version_data, null);
+        return Version.buildFromJson(version_data);
     }
 
     private boolean download_version(Version version) throws OSSUSNoAPIConnectionException {
@@ -110,7 +112,6 @@ abstract public class GenericUpdater {
             file_out.write(buff, 0, read);
         }
 
-
         file_out.flush();
         machine.log_info("Done downloading new version of: " + out_file_name() + ". Total of " + total + "bytes read");
         file_out.close();
@@ -140,5 +141,4 @@ abstract public class GenericUpdater {
         machine.log_info("local file created: " + out_file_name());
         return new BufferedOutputStream(new FileOutputStream(jar_file));
     }
-
 }

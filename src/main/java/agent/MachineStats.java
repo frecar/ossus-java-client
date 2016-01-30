@@ -1,11 +1,11 @@
-package ossus.agent;
+package agent;
 
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-import ossus.commons.Machine;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.Machine;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;

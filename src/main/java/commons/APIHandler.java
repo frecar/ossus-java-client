@@ -1,9 +1,9 @@
-package ossus.commons;
+package commons;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.*;
 import java.net.HttpURLConnection;

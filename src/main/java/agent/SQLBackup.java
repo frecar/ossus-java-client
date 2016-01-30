@@ -1,4 +1,4 @@
-package ossus.agent;
+package agent;
 
 public class SQLBackup {
     private String id;

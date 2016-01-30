@@ -1,9 +1,9 @@
-package ossus.agent;
+package agent;
 
 import it.sauronsoftware.ftp4j.*;
-import ossus.commons.Machine;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
-import ossus.commons.exceptions.OSSUSNoFTPServerConnection;
+import commons.Machine;
+import commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoFTPServerConnection;
 
 import java.io.File;
 import java.io.IOException;
