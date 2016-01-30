@@ -8,46 +8,45 @@ import commons.exceptions.OSSUSNoAPIConnectionException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-public class Updater extends GenericUpdater {
+public final class Updater extends GenericUpdater {
 
-    private final String updater_file_name = "Updater.jar";
+    private final String updaterFileName = "Updater.jar";
 
-    public Updater(Machine machine) {
+    public Updater(final Machine machine) {
         super(machine);
     }
 
-    @Override
-    protected Version current_version() {
-        return machine.get_current_updater_version();
+    protected Version currentVersion() {
+        return machine.getCurrentUpdaterVersion();
     }
 
-    @Override
-    protected Version selected_version() {
-        return machine.selected_updater_version;
+    protected Version selectedVersion() {
+        return machine.selectedUpdaterVersion;
     }
 
-    @Override
-    protected String version_url() {
-        return "client_versions/" + (machine.auto_update ? "current_updater/" : selected_version().name);
+    protected String versionURL() {
+        return "client_versions/"
+                + (machine.autoUpdate ? "current_updater/" : selectedVersion().name);
     }
 
-    @Override
-    protected String out_file_name() {
-        return machine.get_agent_folder() + updater_file_name;
+    protected String outFileName() {
+        return machine.agentFolder + updaterFileName;
     }
 
-    @Override
-    protected URL download_link(Version v) throws OSSUSNoAPIConnectionException {
+    protected URL downloadLink(
+            final Version v
+    ) throws OSSUSNoAPIConnectionException {
         try {
             return new URL(v.updaterLink);
         } catch (MalformedURLException e) {
-            machine.log_error(e.toString());
+            machine.logErrorMessage(e.toString());
             return null;
         }
     }
 
-    @Override
-    protected void download_done(Version new_version) {
-        machine.set_current_updater_version(new_version);
+    protected void downloadDone(
+            final Version newVersion
+    ) {
+        machine.setCurrentUpdaterVersion(newVersion);
     }
 }

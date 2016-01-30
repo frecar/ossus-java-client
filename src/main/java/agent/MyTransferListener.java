@@ -7,7 +7,7 @@ import it.sauronsoftware.ftp4j.FTPClient;
 import it.sauronsoftware.ftp4j.FTPDataTransferListener;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
-public class MyTransferListener implements FTPDataTransferListener {
+public final class MyTransferListener implements FTPDataTransferListener {
 
     private int totalBytesUploaded;
     private long totalBytes;
@@ -16,7 +16,11 @@ public class MyTransferListener implements FTPDataTransferListener {
     private FTPClient client;
     private Date datetimeStarted;
 
-    public MyTransferListener(Machine machine, FTPClient client, long l) {
+    public MyTransferListener(
+            final Machine machine,
+            final FTPClient client,
+            final long l
+    ) {
         this.totalBytes = l;
         this.machine = machine;
         this.client = client;
@@ -27,13 +31,15 @@ public class MyTransferListener implements FTPDataTransferListener {
         totalBytesUploaded = 0;
         percentCompleted = 0;
         try {
-            this.machine.log_info("Transfer started");
+            this.machine.logInfoMessage("Transfer started");
         } catch (OSSUSNoAPIConnectionException e) {
             e.printStackTrace();
         }
     }
 
-    public void transferred(int length) {
+    public void transferred(
+            final int length
+    ) {
 
         totalBytesUploaded += length;
 
@@ -49,7 +55,11 @@ public class MyTransferListener implements FTPDataTransferListener {
             if (ms >= 1000 && (percent % 10 == 0 || percent == 1)) {
                 ms /= 1000;
                 try {
-                    this.machine.log_info(percent + " % completed. " + (totalBytesUploaded / 1024) / ms + " kb/s");
+                    this.machine.logInfoMessage(
+                            percent + " % completed. "
+                                    + (totalBytesUploaded / 1024) / ms
+                                    + " kb/s");
+
                 } catch (OSSUSNoAPIConnectionException e) {
                     e.printStackTrace();
                 }
@@ -61,7 +71,7 @@ public class MyTransferListener implements FTPDataTransferListener {
 
     public void completed() {
         try {
-            this.machine.log_info("Transfer complete");
+            this.machine.logInfoMessage("Transfer complete");
         } catch (OSSUSNoAPIConnectionException e) {
             e.printStackTrace();
         }
@@ -72,7 +82,7 @@ public class MyTransferListener implements FTPDataTransferListener {
             this.client.abortCurrentDataTransfer(true);
         } catch (Exception e) {
             try {
-                this.machine.log_error("Transfer aborted");
+                this.machine.logErrorMessage("Transfer aborted");
             } catch (OSSUSNoAPIConnectionException e1) {
                 e1.printStackTrace();
             }
@@ -84,7 +94,7 @@ public class MyTransferListener implements FTPDataTransferListener {
             this.client.abortCurrentDataTransfer(true);
         } catch (Exception e) {
             try {
-                this.machine.log_error("Transfer failed");
+                this.machine.logErrorMessage("Transfer failed");
             } catch (OSSUSNoAPIConnectionException e1) {
                 e1.printStackTrace();
             }

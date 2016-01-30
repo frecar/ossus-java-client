@@ -4,35 +4,41 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+
+import static java.util.Arrays.asList;
 
 
-public class Machine {
+public final class Machine {
 
+    public static final int MILLISECONDS_DIVIDER = 1000;
     public final String id;
 
-    private Version current_agent_version;
-    private Version current_updater_version;
-    public final Version selected_updater_version;
-    public final Version selected_agent_version;
-    public final boolean auto_update;
+    private Version currentAgentVersion;
+    private Version currentUpdaterVersion;
+    public final Version selectedUpdaterVersion;
+    public final Version selectedAgentVersion;
+    public final boolean autoUpdate;
 
-    public final String server_ip;
-    public final String api_user;
-    public final String api_token;
-    public String agent_folder;
-    public String local_temp_folder;
-    public final String os_system;
-    public final String mysql_dump;
-    public final String downloads_client;
-    public final Boolean force_action;
-    public final Boolean run_install;
+    public final String serverIP;
+    public final String apiUser;
+    public final String apiToken;
+    public String agentFolder;
+    public String localTempFolder;
+    public final String osSystem;
+    public final String mysqlDumpCommand;
+    public final String downloadsClient;
+    public final Boolean forceAction;
+    public final Boolean runInstall;
 
     public long session;
 
@@ -40,67 +46,75 @@ public class Machine {
 
     public final APIHandler apiHandler;
 
-    public Machine(Map<String, String> settings) throws ParseException, IOException, OSSUSNoAPIConnectionException {
-        this.server_ip = settings.get("server_ip");
-        this.id = settings.get("id");
-        this.api_user = settings.get("api_user");
-        this.api_token = settings.get("api_token");
-        this.os_system = settings.get("os_system");
-        this.downloads_client = settings.get("downloads_client");
-        this.mysql_dump = settings.get("mysql_dump");
-        this.agent_folder = settings.get("agent_folder");
-        this.local_temp_folder = settings.get("local_temp_folder");
-        this.session = System.currentTimeMillis() / 1000;
-        this.session = this.session + new Random().nextInt(150);
+    private Machine(
+            final Map<String, String> settings
+    ) throws ParseException, IOException, OSSUSNoAPIConnectionException {
 
-        apiHandler = new APIHandler(this.server_ip + "/api/", api_user, api_token);
+        this.serverIP = settings.get(ApiTrans.MACHINE_SERVER_IP.value);
+        this.id = settings.get(ApiTrans.MACHINE_ID.value);
+        this.apiUser = settings.get(ApiTrans.MACHINE_API_USER.value);
+        this.apiToken = settings.get(ApiTrans.MACHINE_API_TOKEN.value);
+        this.osSystem = settings.get(ApiTrans.MACHINE_OS_SYSTEM.value);
+        this.downloadsClient = settings.get(ApiTrans.MACHINE_DOWNLOADS_CLIENT.value);
+        this.mysqlDumpCommand = settings.get(ApiTrans.MACHINE_MYSQL_DUMP.value);
+        this.agentFolder = settings.get(ApiTrans.MACHINE_AGENT_FOLDER.value);
+        this.localTempFolder = settings.get(ApiTrans.MACHINE_LOCAL_TEMP_FOLDER.value);
+        this.session = System.currentTimeMillis() / MILLISECONDS_DIVIDER;
 
-        if (!this.local_temp_folder.endsWith(System.getProperty("file.separator"))) {
-            this.local_temp_folder += System.getProperty("file.separator");
-        }
-
-        File f_temp = new File(this.local_temp_folder);
-        f_temp.mkdirs();
-
-        if (!this.agent_folder.endsWith(System.getProperty("file.separator"))) {
-            this.agent_folder += System.getProperty("file.separator");
-        }
-
-        File f_agent = new File(this.agent_folder);
-        f_agent.mkdirs();
-
-        this.force_action = settings.get("force_action").equals("1");
-
+        this.apiHandler = new APIHandler(this.serverIP + "/api/", apiUser, apiToken);
         this.log = new Log(apiHandler, this.id);
 
-        List<JSONObject> obj = apiHandler.get_api_data("machines/" + this.id);
+
+        if (!this.localTempFolder.endsWith(System.getProperty("file.separator"))) {
+            this.localTempFolder += System.getProperty("file.separator");
+        }
+
+        if (new File(this.localTempFolder).mkdirs()) {
+            logErrorMessage("Created local temp folder: " + localTempFolder);
+        }
+
+        if (!this.agentFolder.endsWith(System.getProperty("file.separator"))) {
+            this.agentFolder += System.getProperty("file.separator");
+        }
+
+        if (new File(this.agentFolder).mkdirs()) {
+            logErrorMessage("Created local agent folder: " + agentFolder);
+        }
+
+        this.forceAction = settings.get(ApiTrans.MACHINE_FORCE_ACTION.value).equals("1");
+
+        List<JSONObject> obj = apiHandler.getApiData("machines/" + this.id);
         JSONObject data = (JSONObject) obj.get(0).get("machine");
 
-        this.current_agent_version = Version.buildFromJson((JSONObject) data.get("current_agent_version"));
-        this.selected_agent_version = Version.buildFromJson((JSONObject) data.get("selected_agent_version"));
-        this.current_updater_version = Version.buildFromJson((JSONObject) data.get("current_updater_version"));
-        this.selected_updater_version = Version.buildFromJson((JSONObject) data.get("selected_updater_version"));
+        this.currentAgentVersion = Version.buildFromJson((JSONObject) data.get(
+                ApiTrans.MACHINE_CURRENT_AGENT_VERSION.value));
+        this.selectedAgentVersion = Version.buildFromJson((JSONObject) data.get(
+                ApiTrans.MACHINE_SELECTED_AGENT_VERSION.value));
+        this.currentUpdaterVersion = Version.buildFromJson((JSONObject) data.get(
+                ApiTrans.MACHINE_CURRENT_UPDATER_VERSION.value));
+        this.selectedUpdaterVersion = Version.buildFromJson((JSONObject) data.get(
+                ApiTrans.MACHINE_SELECTED_UPDATER_VERSION.value));
 
-        this.auto_update = (Boolean) data.get("auto_update");
-        this.run_install = (Boolean) data.get("run_install");
+        this.autoUpdate = (Boolean) data.get(ApiTrans.MACHINE_AUTO_UPDATE.value);
+        this.runInstall = (Boolean) data.get(ApiTrans.MACHINE_RUN_INSTALL.value);
 
-        this.set_machine_external_ip(this.getExternalIP());
+        this.setMachineExternalIp(this.getExternalIP());
 
     }
 
     public boolean isBusy() {
-        List<JSONObject> obj = apiHandler.get_api_data("machines/" + this.id);
+        List<JSONObject> obj = apiHandler.getApiData("machines/" + this.id);
         JSONObject data = (JSONObject) obj.get(0).get("machine");
-        return (Boolean) data.get("is_busy");
+        return (Boolean) data.get(ApiTrans.MACHINE_IS_BUSY.value);
     }
 
     public String getExternalIP() throws IOException {
-        URL whatismyip = new URL(server_ip + "/api/ip");
+        URL whatismyip = new URL(serverIP + "/api/ip");
         BufferedReader in = new BufferedReader(new InputStreamReader(whatismyip.openStream()));
         return in.readLine();
     }
 
-    public static Machine buildFromSettings(String settingsLocation) throws Exception {
+    public static Machine buildFromSettings(final String settingsLocation) throws Exception {
 
         Map<String, String> settings = new HashMap<>();
 
@@ -109,71 +123,60 @@ public class Machine {
         Object obj = parser.parse(new FileReader(settingsLocation));
         JSONObject jsonObject = (JSONObject) obj;
 
-        settings.put("id", (String) jsonObject.get("id"));
-        settings.put("server_ip", (String) jsonObject.get("server_ip"));
-        settings.put("api_user", (String) jsonObject.get("api_user"));
-        settings.put("api_token", (String) jsonObject.get("api_token"));
-        settings.put("force_action", (String) jsonObject.get("force_action"));
-        settings.put("local_temp_folder", (String) jsonObject.get("local_temp_folder"));
-        settings.put("mysql_dump", (String) jsonObject.get("mysql_dump"));
-        settings.put("agent_folder", (String) jsonObject.get("agent_folder"));
+
+        final List<ApiTrans> settingsFields = asList(
+                ApiTrans.MACHINE_ID,
+                ApiTrans.MACHINE_SERVER_IP,
+                ApiTrans.MACHINE_API_USER,
+                ApiTrans.MACHINE_API_TOKEN,
+                ApiTrans.MACHINE_FORCE_ACTION,
+                ApiTrans.MACHINE_LOCAL_TEMP_FOLDER,
+                ApiTrans.MACHINE_MYSQL_DUMP,
+                ApiTrans.MACHINE_AGENT_FOLDER
+        );
+
+        for (ApiTrans field : settingsFields) {
+            settings.put(field.value, (String) jsonObject.get(field.value));
+        }
 
         return new Machine(settings);
 
     }
 
-    public Version get_current_agent_version() {
-        return current_agent_version;
+    public Version getCurrentUpdaterVersion() {
+        return currentUpdaterVersion;
     }
 
-    public Version get_current_updater_version() {
-        return current_updater_version;
+    public void setMachineExternalIp(final String ipAddress) {
+        apiHandler.getApiData("machines/" + id + "/set_machine_external_ip/" + ipAddress);
     }
 
-    public void set_machine_external_ip(String ipAddress) {
-        final String agent_url = "machines/" + id + "/set_machine_external_ip/" + ipAddress;
-        apiHandler.get_api_data(agent_url);
-    }
-
-    public boolean changesBusyStatus(boolean busy) {
-        String b = (busy ? "1" : "0");
-
-        final String agent_url = "machines/" + id + "/set_busy_updating/" + b + "/session/" + this.session + "/";
-        List<JSONObject> s = apiHandler.get_api_data(agent_url);
+    public boolean changesBusyStatus(final boolean busy) {
+        final String isBusy = busy ? "1" : "0";
+        final List<JSONObject> s = apiHandler.getApiData(
+                "machines/" + id + "/set_busy_updating/" + isBusy + "/session/" + this.session + "/"
+        );
 
         return (Boolean) s.get(0).get("changed_status");
     }
 
-    public void set_current_agent_version(Version current_agent_version) {
-        this.current_agent_version = current_agent_version;
-        final String agent_url = "machines/" + id + "/set_agent_version/" + current_agent_version.id;
-        apiHandler.get_api_data(agent_url);
+    public void setCurrentUpdaterVersion(final Version currentUpdaterVersion) {
+        this.currentUpdaterVersion = currentUpdaterVersion;
+        apiHandler.getApiData(
+                "machines/" + id + "/set_updater_version/" + currentUpdaterVersion.id
+        );
     }
 
-    public void set_current_updater_version(Version current_updater_version) {
-        this.current_updater_version = current_updater_version;
-        final String updater_url = "machines/" + id + "/set_updater_version/" + current_updater_version.id;
-        apiHandler.get_api_data(updater_url);
+    public void logInfoMessage(final String text) throws OSSUSNoAPIConnectionException {
+        this.log.logInfoMessage(session + ": " + text);
     }
 
-    public void log_info(String text) throws OSSUSNoAPIConnectionException {
-        this.log.log_info(session + ": " + text);
+    public void logErrorMessage(final String text) throws OSSUSNoAPIConnectionException {
+        this.log.logErrorMessage(session + ": " + text);
     }
 
-    public void log_error(String text) throws OSSUSNoAPIConnectionException {
-        this.log.log_error(session + ": " + text);
-    }
-
-    public void log_warning(String text) throws OSSUSNoAPIConnectionException {
-        this.log.log_warning(session + ": " + text);
-    }
-
-    public String get_local_temp_folder() {
-        return local_temp_folder;
-    }
-
-    public String get_agent_folder() {
-        return agent_folder;
+    public void logWarningMessage(final String text) throws OSSUSNoAPIConnectionException {
+        this.log.logWarningMessage(session + ": " + text);
     }
 
 }

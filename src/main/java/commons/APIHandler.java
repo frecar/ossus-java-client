@@ -5,7 +5,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -19,16 +22,21 @@ import java.util.Map.Entry;
 
 import static java.lang.Thread.sleep;
 
-public class APIHandler {
+public final class APIHandler {
 
-    private String base_url;
-    private String api_user;
-    private String api_token;
+    public static final int MAX_ATTEMPTS = 10;
+    private String baseURL;
+    private String apiUser;
+    private String apiToken;
 
-    public APIHandler(String url, String api_user, String api_token) {
-        this.base_url = url;
-        this.api_user = api_user;
-        this.api_token = api_token;
+    public APIHandler(
+            final String url,
+            final String apiUser,
+            final String apiToken) {
+
+        this.baseURL = url;
+        this.apiUser = apiUser;
+        this.apiToken = apiToken;
     }
 
     private String getDateTime() {
@@ -37,21 +45,27 @@ public class APIHandler {
         return dateFormat.format(date);
     }
 
-    public void set_api_data(String url_path, Map<String, String> dataList, int attempts) throws OSSUSNoAPIConnectionException {
+    public void setApiData(
+            final String urlPath,
+            final Map<String, String> dataList,
+            final int attempts
+    ) throws OSSUSNoAPIConnectionException {
 
-        if (attempts > 10) {
+        if (attempts > MAX_ATTEMPTS) {
             throw new OSSUSNoAPIConnectionException("Could not set api data");
         }
 
         try {
 
-            URL url = new URL(this.base_url + url_path);
+            URL url = new URL(this.baseURL + urlPath);
 
-            String data = URLEncoder.encode("datetime", "UTF-8") + "=" + URLEncoder.encode(this.getDateTime(), "UTF-8");
-            data += "&api_user=" + api_user + "&api_token=" + api_token;
+            String data = URLEncoder.encode("datetime", "UTF-8")
+                    + "=" + URLEncoder.encode(this.getDateTime(), "UTF-8")
+                    + "&api_user=" + apiUser + "&api_token=" + apiToken;
 
             for (Entry<String, String> pairs : dataList.entrySet()) {
-                data += "&" + URLEncoder.encode(pairs.getKey(), "UTF-8") + "=" + URLEncoder.encode(pairs.getValue(), "UTF-8");
+                data += "&" + URLEncoder.encode(pairs.getKey(), "UTF-8")
+                        + "=" + URLEncoder.encode(pairs.getValue(), "UTF-8");
             }
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -75,20 +89,28 @@ public class APIHandler {
     }
 
 
-    public void set_api_data(String url_path, Map<String, String> dataList) throws OSSUSNoAPIConnectionException {
-        set_api_data(url_path, dataList, 0);
+    public void setApiData(
+            final String urlPath,
+            final Map<String, String> dataList
+    ) throws OSSUSNoAPIConnectionException {
+        setApiData(urlPath, dataList, 0);
     }
 
-    private String download_data_from_url(String u) {
+    private String downloadDataFromUrl(
+            final String u
+    ) {
 
         StringBuilder result = new StringBuilder();
 
+        String finalPath = u;
+
         try {
 
-            u += "?" + URLEncoder.encode("datetime", "UTF-8") + "=" + URLEncoder.encode(this.getDateTime(), "UTF-8");
-            u += "&api_user=" + api_user + "&api_token=" + api_token;
+            finalPath += "?" + URLEncoder.encode("datetime", "UTF-8")
+                    + "=" + URLEncoder.encode(this.getDateTime(), "UTF-8")
+                    + "&api_user=" + apiUser + "&api_token=" + apiToken;
 
-            URL url = new URL(u);
+            URL url = new URL(finalPath);
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
@@ -103,17 +125,18 @@ public class APIHandler {
         }
 
         return result.toString();
-
     }
 
-    public List<JSONObject> get_api_data(String url_path) {
+    public List<JSONObject> getApiData(
+            final String urlPath
+    ) {
 
-        String url = this.base_url + url_path;
+        String url = this.baseURL + urlPath;
         List<JSONObject> list = new ArrayList<JSONObject>();
 
-        String json_content = this.download_data_from_url(url);
-
-        Object obj = JSONValue.parse(json_content);
+        Object obj = JSONValue.parse(
+                this.downloadDataFromUrl(url)
+        );
 
         try {
             list.add((JSONObject) obj);

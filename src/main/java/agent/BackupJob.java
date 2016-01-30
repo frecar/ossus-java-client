@@ -1,5 +1,6 @@
 package agent;
 
+import commons.ApiTrans;
 import commons.Machine;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -9,32 +10,47 @@ import commons.exceptions.OSSUSNoFTPServerConnection;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 
-public class BackupJob {
+public final class BackupJob {
 
     private final Machine machine;
     private final List<Schedule> schedules;
 
-    public BackupJob(Machine machine) throws ParseException, OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
+    public BackupJob(
+            final Machine machine
+    ) throws
+            ParseException,
+            OSSUSNoAPIConnectionException,
+            OSSUSNoFTPServerConnection {
         this.machine = machine;
         schedules = new ArrayList<>();
         getSchedules();
     }
 
-    private void getSchedules() throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
-        machine.log_info("Fetching schedules from server");
-        List<JSONObject> json_list = machine.apiHandler.get_api_data("machines/" + machine.id + "/schedules/");
+    private void getSchedules() throws
+            OSSUSNoAPIConnectionException,
+            OSSUSNoFTPServerConnection {
 
-        JSONArray jsonArray = (JSONArray) json_list.get(0).get("schedules");
+        machine.logInfoMessage(
+                "Fetching schedules from server"
+        );
+
+        List<JSONObject> jsonList = machine.apiHandler.getApiData(
+                "machines/" + machine.id + "/schedules/"
+        );
+
+        JSONArray jsonArray = (JSONArray) jsonList.get(0).get("schedules");
         List<JSONObject> schedules = new ArrayList<>();
 
-        if (json_list.isEmpty()) {
-            machine.log_error("Could not fetch schedules from server");
+        if (jsonList.isEmpty()) {
+            machine.logErrorMessage("Could not fetch schedules from server");
             return;
         } else {
-            machine.log_info("Schedules fetched");
+            machine.logInfoMessage("Schedules fetched");
         }
 
         try {
@@ -45,47 +61,86 @@ public class BackupJob {
 
             addSchedules(schedules);
         } catch (ParseException e) {
-            machine.log_error("Error getting schedules:\n" + e.getMessage());
+            machine.logErrorMessage("Error getting schedules:\n" + e.getMessage());
         }
     }
 
 
-    private void addSchedules(List<JSONObject> schedules) throws ParseException, OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
+    private void addSchedules(
+            final List<JSONObject> schedules
+    ) throws
+            ParseException,
+            OSSUSNoAPIConnectionException,
+            OSSUSNoFTPServerConnection {
+
         for (Object o : schedules) {
             JSONObject obj = (JSONObject) o;
-            machine.log_info("Adding schedule: " + obj.get("name").toString());
+            machine.logInfoMessage("Adding schedule: " + obj.get("name").toString());
             Schedule schedule = new Schedule();
-            schedule.setId(obj.get("id").toString());
-            schedule.setName(obj.get("name").toString());
-            schedule.setCurrent_version_in_loop(obj.get("current_version_in_loop").toString());
-            schedule.setVersionsCount(obj.get("versions_count").toString());
+            schedule.setId(obj.get(ApiTrans.SCHEDULE_ID.value).toString());
+            schedule.setName(obj.get(ApiTrans.SCHEDULE_NAME.value).toString());
+
+            schedule.setCurrentVersionInLoop(
+                    obj.get(
+                            ApiTrans.SCHEDULE_CURRENT_VERSION_IN_LOOP.value
+                    ).toString()
+            );
+
+            schedule.setVersionsCount(obj.get(ApiTrans.SCHEDULE_VERSIONS_COUNT.value).toString());
             schedule.setMachine(machine);
 
-            String next_backup_time_string = obj.get("get_next_backup_time").toString();
+            String nextBackupTimeString = obj.get(
+                    ApiTrans.SCHEDULE_GET_NEXT_BACKUP_TIME.value
+            ).toString();
 
             DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd H:m:s");
-            Date next_backup_time = formatter.parse(next_backup_time_string);
+            Date nextBackupTime = formatter.parse(nextBackupTimeString);
 
-            schedule.set_next_backup_time(next_backup_time);
+            schedule.setNextBackupTime(nextBackupTime);
 
             JSONObject storage = ((JSONObject) obj.get("storage"));
-            schedule.setStorage(new FTPStorage(machine, (String) storage.get("host"), (String) storage.get("username"), (String) storage.get("password"), (String) storage.get("folder")));
-            schedule.setUpload_path(storage.get("folder") + "/" + storage.get("current_day_folder_path"));
+            schedule.setStorage(
+                    new FTPStorage(
+                            machine,
+                            (String) storage.get(ApiTrans.STORAGE_HOST.value),
+                            (String) storage.get(ApiTrans.STORAGE_USERNAME.value),
+                            (String) storage.get(ApiTrans.STORAGE_PASSWORD.value),
+                            (String) storage.get(ApiTrans.STORAGE_FOLDER.value)
+                    ));
 
-            schedule.setRunning_backup(obj.get("running_backup").toString().equals("true"));
-            schedule.setRunning_restore(obj.get("running_restore").toString().equals("true"));
+            schedule.setUploadPath(
+                    storage.get(ApiTrans.STORAGE_FOLDER)
+                            + "/" + storage.get("current_day_folder_path")
+            );
 
-            JSONArray folderBackups = ((JSONArray) obj.get("folder_backups"));
-            JSONArray sqlBackups = ((JSONArray) obj.get("sql_backups"));
+            schedule.setRunningBackup(
+                    obj.get(
+                            ApiTrans.SCHEDULE_RUNNING_BACKUP.value
+                    ).toString().equals("true"));
+
+            schedule.setRunningRestore(
+                    obj.get(
+                            ApiTrans.SCHEDULE_RUNNING_RESTORE.value
+                    ).toString().equals("true"));
+
+            JSONArray folderBackups = ((JSONArray) obj.get(
+                    ApiTrans.SCHEDULE_FOLDER_BACKUPS.value));
+            JSONArray sqlBackups = ((JSONArray) obj.get(
+                    ApiTrans.SCHEDULE_SQL_BACKUPS.value));
 
             if (folderBackups != null) {
                 for (Object folderBackupJson : folderBackups) {
                     FolderBackup folderBackup = new FolderBackup();
                     folderBackup.setId(((JSONObject) folderBackupJson).get("id").toString());
-                    folderBackup.setPath(((JSONObject) folderBackupJson).get("local_folder_path").toString());
+                    folderBackup.setPath(
+                            ((JSONObject) folderBackupJson).get(
+                                    "local_folder_path"
+                            ).toString());
                     schedule.addFolderBackup(folderBackup);
                 }
-            } else machine.log_info("No folders to backup");
+            } else {
+                machine.logInfoMessage("No folders to backup");
+            }
 
             if (sqlBackups != null) {
                 for (Object sqlBackupJson : sqlBackups) {
@@ -99,9 +154,11 @@ public class BackupJob {
                     sqlBackup.setPort(((JSONObject) sqlBackupJson).get("port").toString());
                     schedule.addSqlBackup(sqlBackup);
                 }
-            } else machine.log_info("No sql databases to backup");
+            } else {
+                machine.logInfoMessage("No sql databases to backup");
+            }
 
-            machine.log_info("Schedule added " + schedule.getName());
+            machine.logInfoMessage("Schedule added " + schedule.getName());
             this.schedules.add(schedule);
         }
     }
@@ -109,29 +166,32 @@ public class BackupJob {
     public void runBackup() throws OSSUSNoAPIConnectionException {
 
         if (this.schedules.size() == 0) {
-            machine.log_warning("No schedules to run, have you set up any?");
+            machine.logWarningMessage("No schedules to run, have you set up any?");
         } else {
             for (Schedule schedule : this.schedules) {
-                machine.log_info("Checking if job scheduled to run: " + schedule.getName());
-                if (new Date().after(schedule.get_next_backup_time())) {
-                    machine.log_info("Running schedule " + schedule.getName());
+                machine.logInfoMessage("Checking if job scheduled to run: "
+                        + schedule.getName());
+                if (new Date().after(schedule.getNextBackupTime())) {
+                    machine.logInfoMessage("Running schedule "
+                            + schedule.getName());
 
-                    if (!schedule.getRunning_backup()) {
-                        schedule.setRunning_backup(true);
+                    if (!schedule.getRunningBackup()) {
+                        schedule.setRunningBackup(true);
                         schedule.save();
 
                         try {
                             schedule.runBackup();
                         } catch (OSSUSNoFTPServerConnection e) {
-                            machine.log_error("Running schedule " + schedule.getName() + " failed");
-                            machine.log_error(e.getMessage());
+                            machine.logErrorMessage("Running schedule "
+                                    + schedule.getName() + " failed");
+                            machine.logErrorMessage(e.getMessage());
                         }
 
-                        schedule.setRunning_backup(false);
+                        schedule.setRunningBackup(false);
                         schedule.save();
 
                     } else {
-                        machine.log_error("This schedule is already running!");
+                        machine.logErrorMessage("This schedule is already running!");
                     }
                 }
             }

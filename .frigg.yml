@@ -1,6 +1,8 @@
 tasks:
  - mvn -T 2C -B install
+ - mvn -T 2c -B versions:display-dependency-updates
  - mvn -T 2C -B -q checkstyle:check
  - mvn -T 2C -B pmd:check -Dpmd.printFailingErrors=true
  - mvn -T 2C -B findbugs:check
  - mvn -T 2C -B test
+

@@ -1,5 +1,6 @@
 package agent;
 
+import commons.ApiTrans;
 import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 import commons.exceptions.OSSUSNoFTPServerConnection;
@@ -22,16 +23,17 @@ import java.io.InputStreamReader;
 import static java.lang.Thread.sleep;
 
 
-public class Schedule {
+public final class Schedule {
 
+    public static final int MB_SIZE = 1024;
     private String id;
     private String name;
-    private Boolean running_backup;
-    private Boolean running_restore;
-    private String current_version_in_loop;
-    private String versions_count;
-    private String upload_path;
-    private Date get_next_backup_time;
+    private Boolean runningBackup;
+    private Boolean runningRestore;
+    private String currentVersionInLoop;
+    private String versionsCount;
+    private String uploadPath;
+    private Date nextBackupTime;
 
     private FTPStorage storage;
     private Machine machine;
@@ -40,11 +42,10 @@ public class Schedule {
     private List<SQLBackup> sqlBackups = new ArrayList<SQLBackup>();
 
     public String getId() {
-
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(final String id) {
         this.id = id;
     }
 
@@ -52,48 +53,46 @@ public class Schedule {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(final String name) {
         this.name = name;
     }
 
-    public Boolean getRunning_backup() {
-        return running_backup;
+    public Boolean getRunningBackup() {
+        return runningBackup;
     }
 
-    public void setRunning_backup(Boolean running_backup) {
-        //this.machine.log_info("Running backup " + this.name + " " + running_backup);
-        this.running_backup = running_backup;
+    public void setRunningBackup(final Boolean runningBackup) {
+        //this.machine.logInfoMessage("Running backup " + this.name + " " + runningBackup);
+        this.runningBackup = runningBackup;
     }
 
-    public Boolean getRunning_restore() {
-        return running_restore;
+    public void setRunningRestore(
+            final Boolean runningRestore
+    ) {
+        this.runningRestore = runningRestore;
     }
 
-    public void setRunning_restore(Boolean running_restore) {
-        this.running_restore = running_restore;
+    public void setCurrentVersionInLoop(
+            final String string
+    ) {
+        this.currentVersionInLoop = string;
     }
 
-    public void setCurrent_version_in_loop(String string) {
-        this.current_version_in_loop = string;
+    public void setVersionsCount(
+            final String string
+    ) {
+        this.versionsCount = string;
     }
 
-    public void setVersionsCount(String string) {
-        this.versions_count = string;
+    public void setUploadPath(
+            final String uploadPath
+    ) {
+        this.uploadPath = uploadPath;
     }
 
-    public String getUpload_path() {
-        return upload_path;
-    }
-
-    public void setUpload_path(String upload_path) {
-        this.upload_path = upload_path;
-    }
-
-    public FTPStorage getStorage() {
-        return storage;
-    }
-
-    public void setStorage(FTPStorage storage) {
+    public void setStorage(
+            final FTPStorage storage
+    ) {
         this.storage = storage;
     }
 
@@ -101,27 +100,31 @@ public class Schedule {
         return machine;
     }
 
-    public void setMachine(Machine machine) {
+    public void setMachine(
+            final Machine machine
+    ) {
         this.machine = machine;
     }
 
-    private int find_next_current_version_in_loop() {
+    private int findNextCurrentVersionInLoop() {
 
-        if (Integer.parseInt(this.current_version_in_loop) >= Integer.parseInt(this.versions_count)) {
+        if (Integer.parseInt(this.currentVersionInLoop) >= Integer.parseInt(this.versionsCount)) {
             return 1;
         }
 
-        return Integer.parseInt(this.current_version_in_loop) + 1;
+        return Integer.parseInt(this.currentVersionInLoop) + 1;
 
     }
 
-    public void save() throws OSSUSNoAPIConnectionException {
+    public void save()
+            throws OSSUSNoAPIConnectionException {
         HashMap<String, String> map = new HashMap<String, String>();
-        map.put("name", this.name);
-        map.put("running_backup", "" + this.running_backup);
-        map.put("running_restore", "" + this.running_restore);
-        map.put("current_version_in_loop", "" + this.find_next_current_version_in_loop());
-        this.machine.apiHandler.set_api_data("schedules/" + this.id + "/", map);
+        map.put(ApiTrans.SCHEDULE_NAME.value, this.name);
+        map.put(ApiTrans.SCHEDULE_RUNNING_BACKUP.value, "" + this.runningBackup);
+        map.put(ApiTrans.SCHEDULE_RUNNING_RESTORE.value, "" + this.runningRestore);
+        map.put(ApiTrans.SCHEDULE_CURRENT_VERSION_IN_LOOP.value,
+                "" + this.findNextCurrentVersionInLoop());
+        this.machine.apiHandler.setApiData("schedules/" + this.id + "/", map);
     }
 
     private String getDateTime() {
@@ -130,16 +133,24 @@ public class Schedule {
         return dateFormat.format(date);
     }
 
-    public void createBackupEntry(String start, String end, String file_name) throws OSSUSNoAPIConnectionException {
-        HashMap<String, String> map = new HashMap<String, String>();
+    public void createBackupEntry(
+            final String start,
+            final String end,
+            final String fileName
+    ) throws OSSUSNoAPIConnectionException {
+
+        HashMap<String, String> map = new HashMap<>();
         map.put("schedule_id", "" + this.id);
         map.put("time_started", start);
         map.put("time_ended", end);
-        map.put("upload_path", this.upload_path);
-        map.put("file_name", file_name);
+        map.put("uploadPath", this.uploadPath);
+        map.put("file_name", fileName);
 
-        this.machine.log_info("Create backup entry " + this.name + " started at " + start + " file name " + file_name);
-        this.machine.apiHandler.set_api_data("backups/" + this.machine.id + "/create_backup/", map);
+        this.machine.logInfoMessage("Create backup entry "
+                + this.name + " started at "
+                + start + " file name " + fileName);
+
+        this.machine.apiHandler.setApiData("backups/" + this.machine.id + "/create_backup/", map);
     }
 
     public void runBackup() throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
@@ -148,140 +159,213 @@ public class Schedule {
 
         FTPStorage ftpStorage = this.storage;
 
-        String file_separator = System.getProperty("file.separator");
-        String tmp_folder = machine.get_local_temp_folder();
+        String fileSeparator = System.getProperty("file.separator");
+        String tempFolder = machine.localTempFolder;
 
-        String filename_zip = "";
+        String filenameZip = "";
 
         if (this.getFolderBackups().size() == 0 && this.getSqlBackups().size() == 0) {
-            this.machine.log_warning("Schedule " + this.name + " has nothing to do, skipping.");
+            this.machine.logWarningMessage("Schedule " + this.name
+                    + " has nothing to do, skipping.");
             return;
         }
 
         for (FolderBackup folderBackup : this.getFolderBackups()) {
-            filename_zip = zipAndUploadFolder(ftpStorage, file_separator, tmp_folder, folderBackup);
+            filenameZip = zipAndUploadFolder(ftpStorage, fileSeparator, tempFolder, folderBackup);
         }
 
         for (SQLBackup sqlBackup : this.getSqlBackups()) {
-            filename_zip = zipAndUploadSQLBackup(ftpStorage, file_separator, tmp_folder, sqlBackup);
+            filenameZip = zipAndUploadSQLBackup(ftpStorage, fileSeparator, tempFolder, sqlBackup);
         }
 
-        this.createBackupEntry(start, this.getDateTime(), filename_zip);
+        this.createBackupEntry(start, this.getDateTime(), filenameZip);
 
         this.save();
 
     }
 
-    private String zipAndUploadSQLBackup(FTPStorage ftpStorage,
-                                         String file_separator,
-                                         String tmp_folder,
-                                         SQLBackup sqlBackup) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
-        String filename_zip;
-        this.machine.log_info("Performing " + sqlBackup.getType() + " backup of " + sqlBackup.getDatabase() + " at " + sqlBackup.getHost());
-        String folder_zip = tmp_folder + sqlBackup.getDatabase() + file_separator;
-        File f = new File(folder_zip);
+    private String zipAndUploadSQLBackup(
+            final FTPStorage ftpStorage,
+            final String fileSeparator,
+            final String tmpFolder,
+            final SQLBackup sqlBackup
+    ) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
 
-        String filename_backup_zip = "";
+        String filenameZip;
+        this.machine.logInfoMessage("Performing "
+                + sqlBackup.getType() + " backup of "
+                + sqlBackup.getDatabase() + " at "
+                + sqlBackup.getHost());
+
+        String folderZip = tmpFolder + sqlBackup.getDatabase() + fileSeparator;
+        File f = new File(folderZip);
+
+        String filenameBackupZip = "";
 
         try {
-            f.mkdirs();
+
+            if (f.mkdirs()) {
+                this.machine.logInfoMessage("Created " + f.getName());
+            }
+
             if (sqlBackup.getType().equals("mysql")) {
-                filename_backup_zip = folder_zip + sqlBackup.getDatabase() + ".sql";
+                filenameBackupZip = folderZip
+                        + sqlBackup.getDatabase()
+                        + ".sql";
+
                 String executeCmd;
 
                 //Delete old sql file if exists
-                File file_bak = new File(filename_backup_zip);
-                if (file_bak.exists() && !file_bak.delete()) {
-                    machine.log_error("Error deleting old sql file");
+                File oldSQLBackup = new File(filenameBackupZip);
+
+                if (oldSQLBackup.exists() && !oldSQLBackup.delete()) {
+                    machine.logErrorMessage("Error deleting old sql file");
                 }
 
-                executeCmd = this.machine.mysql_dump + " --single-transaction --user='" + sqlBackup.getUsername() + "' --host='" + sqlBackup.getHost() + "' --password='" + sqlBackup.getPassword() + "' " + sqlBackup.getDatabase() + " > " + filename_backup_zip;
+                executeCmd = this.machine.mysqlDumpCommand
+                        + " --single-transaction --user='"
+                        + sqlBackup.getUsername() + "' --host='"
+                        + sqlBackup.getHost() + "' --password='"
+                        + sqlBackup.getPassword() + "' "
+                        + sqlBackup.getDatabase() + " > "
+                        + filenameBackupZip;
+
                 System.out.println(executeCmd);
                 this.execShellCmd(executeCmd);
             } else {
-                filename_backup_zip = folder_zip + sqlBackup.getDatabase() + ".bak";
+                filenameBackupZip = folderZip + sqlBackup.getDatabase() + ".bak";
 
                 //Delete old bak file if exists
-                File file_bak = new File(filename_backup_zip);
-                if (file_bak.exists() && !file_bak.delete()) {
-                    machine.log_error("Error deleting old bak file");
+                File fileBak = new File(filenameBackupZip);
+                if (fileBak.exists() && !fileBak.delete()) {
+                    machine.logErrorMessage("Error deleting old bak file");
                 }
 
                 Connection conn;
                 Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
-                conn = DriverManager.getConnection("jdbc:jtds:sqlserver://" + sqlBackup.getHost() + "; portNumber=" + sqlBackup.getPort() + "; databaseName=" + sqlBackup.getDatabase(), sqlBackup.getUsername(), sqlBackup.getPassword());
+                conn = DriverManager.getConnection(
+                        "jdbc:jtds:sqlserver://" + sqlBackup.getHost()
+                                + "; portNumber=" + sqlBackup.getPort()
+                                + "; databaseName=" + sqlBackup.getDatabase(),
+                        sqlBackup.getUsername(),
+                        sqlBackup.getPassword());
+
                 conn.setAutoCommit(true);
                 Statement select = conn.createStatement();
 
-                select.executeQuery("BACKUP DATABASE " + sqlBackup.getDatabase() + " TO DISK='" + filename_backup_zip + "'");
+                select.executeQuery("BACKUP DATABASE " + sqlBackup.getDatabase()
+                        + " TO DISK='" + filenameBackupZip + "'");
                 conn.close();
 
             }
         } catch (SQLException e) {
-            machine.log_error(e.getMessage());
+            machine.logErrorMessage(e.getMessage());
         } catch (ClassNotFoundException e) {
-            machine.log_error(e.getMessage());
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            machine.logErrorMessage(e.getMessage());
+            e.printStackTrace();
         }
 
-        filename_zip = filename_backup_zip.replace(file_separator, "_") + ".zip";
+        filenameZip = filenameBackupZip.replace(fileSeparator, "_") + ".zip";
 
         try {
-            Zipper.zipDir(filename_zip, folder_zip, machine);
+            Zipper.zipDir(filenameZip, folderZip, machine);
         } catch (Exception e) {
-            this.machine.log_error(e.getMessage());
+            this.machine.logErrorMessage(e.getMessage());
         }
 
-        ftpStorage.upload(this.upload_path, filename_zip, 0);
-
-        try {
-            new File(filename_zip).delete();
-        } catch (Exception e) {
-            this.machine.log_error(e.getMessage());
-        }
+        ftpStorage.upload(this.uploadPath, filenameZip, 0);
 
         try {
-            new File(filename_zip).delete();
+            if (new File(filenameZip).delete()) {
+                this.machine.logInfoMessage("Deleted: " + filenameZip);
+            }
         } catch (Exception e) {
-            this.machine.log_error(e.getMessage());
+            this.machine.logErrorMessage(e.getMessage());
         }
-        return filename_zip;
+
+        try {
+            if (new File(filenameZip).delete()) {
+                this.machine.logInfoMessage("Deleted: " + filenameZip);
+            }
+        } catch (Exception e) {
+            this.machine.logErrorMessage(e.getMessage());
+        }
+
+        return filenameZip;
     }
 
-    private String zipAndUploadFolder(FTPStorage ftpStorage,
-                                      String file_separator,
-                                      String tmp_folder,
-                                      FolderBackup folderBackup) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
-        String filename_zip;
-        filename_zip = folderBackup.getPath().replaceAll("\\" + file_separator, "_").replaceAll("\\:", "_").replaceAll(" ", "-") + ".zip";
+    private String zipAndUploadFolder(
+            final FTPStorage ftpStorage,
+            final String fileSeparator,
+            final String tmpFolder,
+            final FolderBackup folderBackup
+    ) throws
+            OSSUSNoAPIConnectionException,
+            OSSUSNoFTPServerConnection {
 
-        this.machine.log_info("Zipping " + tmp_folder + filename_zip + " - " + folderBackup.getPath());
-        Zipper.zipDir(tmp_folder + filename_zip, folderBackup.getPath(), this.machine);
+        String filenameZip;
+        filenameZip = folderBackup.getPath()
+                .replaceAll("\\" + fileSeparator, "_")
+                .replaceAll("\\:", "_")
+                .replaceAll(" ", "-") + ".zip";
 
-        File file = new File(tmp_folder + filename_zip);
+        this.machine.logInfoMessage("Zipping "
+                + tmpFolder
+                + filenameZip
+                + " - "
+                + folderBackup.getPath()
+        );
 
-        this.machine.log_info("Done zipping " + (file.length() / 1024 / 1024) + " MB");
-        this.machine.log_info("Uploading " + tmp_folder + filename_zip + " to " + this.upload_path + " server: " + ftpStorage.client.getHost());
-        ftpStorage.upload(this.upload_path, tmp_folder + filename_zip, 0);
-        this.machine.log_info("Upload of " + filename_zip + " done");
+        Zipper.zipDir(
+                tmpFolder + filenameZip,
+                folderBackup.getPath(),
+                this.machine
+        );
 
-        file.delete();
+        File file = new File(tmpFolder + filenameZip);
 
-        return filename_zip;
+        this.machine.logInfoMessage("Done zipping "
+                + (file.length() / MB_SIZE / MB_SIZE)
+                + " MB");
+
+        this.machine.logInfoMessage("Uploading "
+                + tmpFolder + filenameZip
+                + " to " + this.uploadPath
+                + " server: " + ftpStorage.client.getHost()
+        );
+
+        ftpStorage.upload(
+                this.uploadPath,
+                tmpFolder + filenameZip,
+                0);
+
+        this.machine.logInfoMessage(
+                "Upload of " + filenameZip + " done"
+        );
+
+        if (file.delete()) {
+            this.machine.logInfoMessage("Deleted: " + file.getName());
+        }
+
+        return filenameZip;
     }
 
-    public void execShellCmd(String cmd) throws OSSUSNoAPIConnectionException {
+    public void execShellCmd(
+            final String cmd
+    ) throws OSSUSNoAPIConnectionException {
         try {
             Runtime runtime = Runtime.getRuntime();
             Process process = runtime.exec(new String[]{"/bin/bash", "-c", cmd});
             //int exitValue = process.waitFor();
-            BufferedReader buf = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader buf = new BufferedReader(
+                    new InputStreamReader(process.getInputStream())
+            );
             while (buf.readLine() != null) {
                 sleep(1);
             }
         } catch (Exception e) {
-            this.machine.log_error(e.getMessage());
+            this.machine.logErrorMessage(e.getMessage());
         }
     }
 
@@ -289,7 +373,9 @@ public class Schedule {
         return folderBackups;
     }
 
-    public void addFolderBackup(FolderBackup folderBackup) {
+    public void addFolderBackup(
+            final FolderBackup folderBackup
+    ) {
         this.folderBackups.add(folderBackup);
     }
 
@@ -297,16 +383,20 @@ public class Schedule {
         return sqlBackups;
     }
 
-    public void addSqlBackup(SQLBackup sqlBackup) {
+    public void addSqlBackup(
+            final SQLBackup sqlBackup
+    ) {
         this.sqlBackups.add(sqlBackup);
     }
 
-    public Date get_next_backup_time() {
-        return get_next_backup_time;
+    public Date getNextBackupTime() {
+        return nextBackupTime;
     }
 
-    public void set_next_backup_time(Date get_next_backup_time) {
-        this.get_next_backup_time = get_next_backup_time;
+    public void setNextBackupTime(
+            final Date nextBackupTime
+    ) {
+        this.nextBackupTime = nextBackupTime;
     }
 }
 

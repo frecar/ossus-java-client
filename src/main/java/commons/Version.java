@@ -3,7 +3,7 @@ package commons;
 import org.json.simple.JSONObject;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
-public class Version {
+public final class Version {
 
     public final String name;
     public final String updaterLink;
@@ -13,12 +13,12 @@ public class Version {
     private Version(
             final String id,
             final String name,
-            final String update_link,
+            final String updateLink,
             final String agentLink
     ) {
         this.id = id;
         this.name = name;
-        this.updaterLink = update_link;
+        this.updaterLink = updateLink;
         this.agentLink = agentLink;
     }
 
@@ -26,23 +26,22 @@ public class Version {
             final JSONObject json
     ) throws OSSUSNoAPIConnectionException {
         return new Version(
-                json.get(OssusAPICONST.VERSION_ID).toString(),
-                (String) json.get(OssusAPICONST.VERSION_NAME),
-                (String) json.get(OssusAPICONST.VERSION_UPDATER_LINK), (
-                String) json.get(OssusAPICONST.VERSION_AGENT_LINK)
+                json.get(ApiTrans.VERSION_ID.value).toString(),
+                (String) json.get(ApiTrans.VERSION_NAME.value),
+                (String) json.get(ApiTrans.VERSION_UPDATER_LINK.value), (
+                String) json.get(ApiTrans.VERSION_AGENT_LINK.value)
         );
     }
 
-    public final boolean equals(final Object o) {
+    public boolean equals(final Object o) {
         return o instanceof Version && name.equals(((Version) o).name);
     }
 
-
-    public final int hashCode() {
+    public int hashCode() {
         return name.hashCode();
     }
 
-    public final String toString() {
+    public String toString() {
         return "Ossus Version" + name;
     }
 }

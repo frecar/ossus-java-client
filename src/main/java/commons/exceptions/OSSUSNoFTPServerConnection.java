@@ -1,7 +1,7 @@
 package commons.exceptions;
 
 public class OSSUSNoFTPServerConnection extends Exception {
-    public OSSUSNoFTPServerConnection(String message) {
+    public OSSUSNoFTPServerConnection(final String message) {
         super(message);
     }
 }

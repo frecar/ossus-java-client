@@ -3,142 +3,159 @@ package commons;
 import org.json.simple.JSONObject;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
-/*
-    TODO: The server could send information saying wheter teh version running is the newest/current or not, together
-    with the other Machine / version data when initializing.
- */
-
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-abstract public class GenericUpdater {
+public abstract class GenericUpdater {
 
+    public static final int BYTE_SIZE_DOWNLOAD = 8192;
     protected final Machine machine;
-    private final APIHandler api_handler;
+    private final APIHandler apiHandler;
 
-    protected GenericUpdater(Machine machine) {
+    protected GenericUpdater(final Machine machine) {
         this.machine = machine;
-        this.api_handler = machine.apiHandler;
+        this.apiHandler = machine.apiHandler;
     }
 
-    protected abstract Version current_version();
+    protected abstract Version currentVersion();
 
-    protected abstract Version selected_version();
+    protected abstract Version selectedVersion();
 
-    protected abstract String out_file_name();
+    protected abstract String outFileName();
 
-    protected abstract String version_url();
+    protected abstract String versionURL();
 
-    protected abstract URL download_link(Version v) throws OSSUSNoAPIConnectionException;
+    protected abstract URL downloadLink(final Version v)
+            throws OSSUSNoAPIConnectionException;
 
-    protected abstract void download_done(Version new_version);
+    protected abstract void downloadDone(final Version newVersion);
 
-    public void run() throws OSSUSNoAPIConnectionException {
+    public final void run() throws OSSUSNoAPIConnectionException {
 
-        machine.log_info("Fetching version information from server");
+        machine.logInfoMessage("Fetching version information from server");
         Version selected = getSelectedVersion();
 
-        if (!machine.auto_update && current_version().equals(selected_version())) {
-            machine.log_info("This machine is set to not auto update");
-            machine.log_info("This machine is running the selected version " + selected_version());
+        if (!machine.autoUpdate && currentVersion().equals(selectedVersion())) {
+            machine.logInfoMessage("This machine is set to not auto update");
+            machine.logInfoMessage("This machine is running the selected version "
+                    + selectedVersion());
             return;
         }
 
         if (selected == null) {
-            machine.log_error("Failed to fetch version information");
+            machine.logErrorMessage("Failed to fetch version information");
             return;
         }
 
-        if (!selected.equals(current_version())) {
-            machine.log_info("New version detected: " + selected.name);
-            if (download_version(selected)) {
-                download_done(selected);
-                machine.log_info("Set new " + selected.name);
+        if (!selected.equals(currentVersion())) {
+            machine.logInfoMessage("New version detected: " + selected.name);
+            if (downloadVersion(selected)) {
+                downloadDone(selected);
+                machine.logInfoMessage("Set new " + selected.name);
             } else {
-                machine.log_error("New version was (probably) not downloaded...");
+                machine.logErrorMessage("New version was (probably) not downloaded...");
             }
         } else {
-            machine.log_info("Current updater up to date, no need to update");
+            machine.logInfoMessage("Current updater up to date, no need to update");
         }
 
-        machine.log_info("Completed update check of updater");
+        machine.logInfoMessage("Completed update check of updater");
 
     }
 
     private Version getSelectedVersion() throws OSSUSNoAPIConnectionException {
-        if (!machine.auto_update) return selected_version();
+        if (!machine.autoUpdate) {
+            return selectedVersion();
+        }
 
-        List<JSONObject> json_data = api_handler.get_api_data(version_url());
-        if (json_data.size() != 1) {
+        final List<JSONObject> jsonData = apiHandler.getApiData(versionURL());
+
+        if (jsonData.size() != 1) {
             return null;
         }
 
-        JSONObject version_data = (JSONObject) json_data.get(0).get("client_version");
-        return Version.buildFromJson(version_data);
+        return Version.buildFromJson(
+                (JSONObject) jsonData.get(0).get("client_version")
+        );
     }
 
-    private boolean download_version(Version version) throws OSSUSNoAPIConnectionException {
-        machine.log_info("Downloading new version");
-        machine.log_info("Current version: " + current_version());
-        machine.log_info("New version: " + version);
+    private boolean downloadVersion(final Version version)
+            throws OSSUSNoAPIConnectionException {
+        machine.logInfoMessage("Downloading new version");
+        machine.logInfoMessage("Current version: " + currentVersion());
+        machine.logInfoMessage("New version: " + version);
 
-        URL jar_url = download_link(version);
-        if (jar_url != null) try {
-            readAndSaveJar(jar_url);
-        } catch (Exception e) {
-            machine.log_error(e.toString());
-            return false;
-        }
-        else {
-            machine.log_error("Download link was null. strange.");
+        URL jarURL = downloadLink(version);
+        if (jarURL != null) {
+            try {
+                readAndSaveJar(jarURL);
+            } catch (Exception e) {
+                machine.logErrorMessage(e.toString());
+                return false;
+            }
+        } else {
+            machine.logErrorMessage("Download link was null. strange.");
             return false;
         }
         return true;
     }
 
-    private void readAndSaveJar(URL jar_url) throws IOException, OSSUSNoAPIConnectionException {
-        if (jar_url == null) throw new IOException("URL argument is null");  // not really an ioexception, fix?
+    private void readAndSaveJar(
+            final URL jarURL
+    ) throws IOException, OSSUSNoAPIConnectionException {
 
-        BufferedOutputStream file_out = create_updater_file();
-        BufferedInputStream in = new BufferedInputStream(jar_url.openStream());
-
-        machine.log_info("Starting download new version of: " + out_file_name());
-
-        int read, total = 1;
-        byte[] buff = new byte[8192];   // todo: whats a good size
-        while ((read = in.read(buff)) != -1) {
-            total += read;
-            file_out.write(buff, 0, read);
+        if (jarURL == null) {
+            throw new IOException("URL argument is null");
         }
 
-        file_out.flush();
-        machine.log_info("Done downloading new version of: " + out_file_name() + ". Total of " + total + "bytes read");
-        file_out.close();
+        BufferedOutputStream fileOut = createUpdaterFile();
+        BufferedInputStream in = new BufferedInputStream(jarURL.openStream());
+
+        machine.logInfoMessage("Starting download new version of: " + outFileName());
+
+        int read, total = 1;
+        byte[] buff = new byte[BYTE_SIZE_DOWNLOAD];   // todo: whats a good size
+        while ((read = in.read(buff)) != -1) {
+            total += read;
+            fileOut.write(buff, 0, read);
+        }
+
+        fileOut.flush();
+        machine.logInfoMessage("Done downloading new version of: " + outFileName());
+        machine.logInfoMessage("Total of " + total + " bytes read");
+        fileOut.close();
         in.close();
 
     }
 
-    private BufferedOutputStream create_updater_file() throws IOException, OSSUSNoAPIConnectionException {
+    private BufferedOutputStream createUpdaterFile()
+            throws IOException, OSSUSNoAPIConnectionException {
 
-        File jar_file = new File(out_file_name());
+        final File jarFile = new File(outFileName());
 
-        if (!jar_file.exists()) {
-            machine.log_info("No file exists..: " + out_file_name());
+        if (!jarFile.exists()) {
+            machine.logInfoMessage("No file exists..: " + outFileName());
         } else {
-            machine.log_info("Delete old version of: " + out_file_name());
-            if (new File(out_file_name()).delete()) {
-                machine.log_info(out_file_name() + " deleted");
+            machine.logInfoMessage("Delete old version of: " + outFileName());
+            if (new File(outFileName()).delete()) {
+                machine.logInfoMessage(outFileName() + " deleted");
             } else {
-                machine.log_error(out_file_name() + " could not be deleted");
+                machine.logErrorMessage(outFileName() + " could not be deleted");
             }
         }
 
-        machine.log_info("Creating local file: " + out_file_name());
-        boolean created = jar_file.createNewFile();
-        if (!created) throw new IOException("Could not create file " + jar_file);
+        machine.logInfoMessage("Creating local file: " + outFileName());
 
-        machine.log_info("local file created: " + out_file_name());
-        return new BufferedOutputStream(new FileOutputStream(jar_file));
+        if (!jarFile.createNewFile()) {
+            throw new IOException("Could not create file " + jarFile);
+        }
+
+        machine.logInfoMessage("local file created: " + outFileName());
+        return new BufferedOutputStream(new FileOutputStream(jarFile));
     }
 }
