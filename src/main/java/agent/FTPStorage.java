@@ -13,7 +13,7 @@ import java.io.File;
 import java.io.IOException;
 
 public final class FTPStorage {
-    private FTPClient client;
+    public FTPClient client;
     private String homeFolder;
     private Machine machine;
 
