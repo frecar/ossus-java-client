@@ -78,7 +78,7 @@ public final class FTPStorage {
                 } catch (Exception e1) {
                     this.machine.logErrorMessage(e1.getMessage());
                 }
-                this.machine.logErrorMessage(e.getMessage());
+                this.machine.logWarningMessage(e.getMessage());
                 this.machine.logInfoMessage("Creating folder " + midPath);
             }
         }
