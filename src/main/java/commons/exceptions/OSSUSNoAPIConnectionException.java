@@ -1,7 +1,7 @@
-package ossus.commons.exceptions;
+package commons.exceptions;
 
 public class OSSUSNoAPIConnectionException extends Exception {
-    public OSSUSNoAPIConnectionException(String message) {
+    public OSSUSNoAPIConnectionException(final String message) {
         super(message);
     }
 }

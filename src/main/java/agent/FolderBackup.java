@@ -1,23 +1,16 @@
-package ossus.agent;
+package agent;
 
-public class FolderBackup {
+public final class FolderBackup {
     private String id;
     private String path;
-    private Schedule schedule;
-
-    public Schedule getSchedule() {
-        return this.schedule;
-    }
-
-    public void setSchedule(Schedule schedule) {
-        this.schedule = schedule;
-    }
 
     public String getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(
+            final String id
+    ) {
         this.id = id;
     }
 
@@ -29,7 +22,9 @@ public class FolderBackup {
         return path;
     }
 
-    public void setPath(String path) {
+    public void setPath(
+            final String path
+    ) {
         this.path = path;
     }
 }

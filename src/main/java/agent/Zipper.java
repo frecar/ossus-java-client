@@ -1,20 +1,34 @@
-package ossus.agent;
+package agent;
 
-import ossus.commons.Machine;
+import commons.Machine;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
-import ossus.commons.exceptions.OSSUSNoAPIConnectionException;
+import commons.exceptions.OSSUSNoAPIConnectionException;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class Zipper {
 
-    static void zipDir(String zipFileName, String dir, Machine machine) throws OSSUSNoAPIConnectionException {
+    static void zipDir(
+            final String zipFileName,
+            final String dir,
+            final Machine machine
+    ) throws OSSUSNoAPIConnectionException {
         Zipper.createZipFromDirectory(dir, zipFileName, machine, true);
     }
 
-    public static boolean createZipFromDirectory(String directory, String filename, Machine machine, boolean absolute) throws OSSUSNoAPIConnectionException {
+    public static boolean createZipFromDirectory(
+            final String directory,
+            final String filename,
+            final Machine machine,
+            final boolean absolute
+    ) throws OSSUSNoAPIConnectionException {
+
         File rootDir = new File(directory);
         File saveFile = new File(filename);
 
@@ -23,62 +37,59 @@ public class Zipper {
         try {
             zaos = new ZipArchiveOutputStream(new FileOutputStream(saveFile));
         } catch (FileNotFoundException e) {
-            machine.log_error(e.getMessage());
+            machine.logErrorMessage(e.getMessage());
             return false;
         }
         try {
             recurseFiles(rootDir, rootDir, zaos, absolute);
         } catch (IOException e2) {
-            machine.log_error(e2.getMessage());
+            machine.logErrorMessage(e2.getMessage());
 
             try {
                 zaos.close();
             } catch (IOException e) {
-                machine.log_error(e.getMessage());
+                machine.logErrorMessage(e.getMessage());
             }
             return false;
         }
         try {
             zaos.finish();
         } catch (IOException e1) {
-            machine.log_error(e1.getMessage());
+            machine.logErrorMessage(e1.getMessage());
             return false;
         }
         try {
             zaos.flush();
         } catch (IOException e) {
-            machine.log_error(e.getMessage());
+            machine.logErrorMessage(e.getMessage());
             return false;
         }
         try {
             zaos.close();
         } catch (IOException e) {
-            machine.log_error(e.getMessage());
+            machine.logErrorMessage(e.getMessage());
             return false;
         }
 
         return true;
     }
 
-    /**
-     * * Recursive traversal to add files
-     * *
-     * * @param root
-     * * @param file
-     * * @param zaos
-     * * @param absolute
-     * * @throws IOException
-     */
-    private static void recurseFiles(File root, File file, ZipArchiveOutputStream zaos,
-                                     boolean absolute) throws IOException {
+    private static void recurseFiles(
+            final File root,
+            final File file,
+            final ZipArchiveOutputStream zaos,
+            final boolean absolute
+    ) throws IOException {
+
         if (file.isDirectory()) {
-            // recursive call
             File[] files = file.listFiles();
-            for (File file2 : files) {
-                recurseFiles(root, file2, zaos, absolute);
+            if (files != null) {
+                for (File file2 : files) {
+                    recurseFiles(root, file2, zaos, absolute);
+                }
             }
-        } else if ((!file.getName().endsWith(".zip")) && (!file.getName().endsWith(".ZIP"))) {
-            String filename = null;
+        } else if (!file.getName().endsWith(".zip") && !file.getName().endsWith(".ZIP")) {
+            String filename;
             if (absolute) {
                 filename = file.getAbsolutePath().substring(root.getAbsolutePath().length());
             } else {
@@ -93,5 +104,4 @@ public class Zipper {
             zaos.closeArchiveEntry();
         }
     }
-
 }

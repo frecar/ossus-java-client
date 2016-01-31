@@ -1,6 +1,6 @@
-package ossus.agent;
+package agent;
 
-public class SQLBackup {
+public final class SQLBackup {
     private String id;
     private String database;
     private String username;
@@ -13,7 +13,7 @@ public class SQLBackup {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(final String id) {
         this.id = id;
     }
 
@@ -21,7 +21,7 @@ public class SQLBackup {
         return username;
     }
 
-    public void setUsername(String username) {
+    public void setUsername(final String username) {
         this.username = username;
     }
 
@@ -29,7 +29,7 @@ public class SQLBackup {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(final String password) {
         this.password = password;
     }
 
@@ -37,7 +37,7 @@ public class SQLBackup {
         return host;
     }
 
-    public void setHost(String host) {
+    public void setHost(final String host) {
         this.host = host;
     }
 
@@ -45,7 +45,7 @@ public class SQLBackup {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(final String type) {
         this.type = type;
     }
 
@@ -53,7 +53,7 @@ public class SQLBackup {
         return database;
     }
 
-    public void setDatabase(String database) {
+    public void setDatabase(final String database) {
         this.database = database;
     }
 
@@ -61,7 +61,7 @@ public class SQLBackup {
         return port;
     }
 
-    public void setPort(String port) {
+    public void setPort(final String port) {
         this.port = port;
     }
 
