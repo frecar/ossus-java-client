@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -21,8 +22,6 @@ import java.util.List;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-
-import static java.lang.Thread.sleep;
 
 
 public final class Schedule {
@@ -206,6 +205,10 @@ public final class Schedule {
 
         String filenameBackupZip = "";
 
+        Connection conn = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+
         try {
 
             if (f.mkdirs()) {
@@ -251,7 +254,7 @@ public final class Schedule {
                     machine.logErrorMessage("Error deleting old bak file");
                 }
 
-                Connection conn;
+
                 Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
                 conn = DriverManager.getConnection(
@@ -263,19 +266,30 @@ public final class Schedule {
 
                 conn.setAutoCommit(true);
 
-                ResultSet result = conn.createStatement().executeQuery("BACKUP DATABASE "
-                        + sqlBackup.getDatabase()
-                        + " TO DISK='" + filenameBackupZip + "'");
+                preparedStatement = conn.prepareStatement(
+                        "BACKUP DATABASE ? TO DISK='?'"
+                );
 
-                result.close();
-
+                preparedStatement.setString(1, sqlBackup.getDatabase());
+                preparedStatement.setString(2, filenameBackupZip);
+                resultSet = preparedStatement.executeQuery();
             }
-
-        } catch (SQLException e) {
+        } catch (ClassNotFoundException | SQLException e) {
             machine.logErrorMessage(e.getMessage());
-        } catch (ClassNotFoundException e) {
-            machine.logErrorMessage(e.getMessage());
-            e.printStackTrace();
+        } finally {
+            try {
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+                if (resultSet != null) {
+                    resultSet.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                machine.logErrorMessage(e.getMessage());
+            }
         }
 
         filenameZip = filenameBackupZip.replace(fileSeparator, "_") + ".zip";
@@ -371,6 +385,8 @@ public final class Schedule {
         BufferedReader buf = null;
         InputStreamReader inputStreamReader = null;
 
+        StringBuilder stringBuilder = new StringBuilder();
+
         try {
             runtime = Runtime.getRuntime();
             process = runtime.exec(new String[]{"/bin/bash", "-c", cmd});
@@ -385,9 +401,16 @@ public final class Schedule {
             }
 
             buf = new BufferedReader(inputStreamReader);
+            String line;
 
-            while (buf.readLine() != null) {
-                sleep(1);
+            while ((line = buf.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+
+            if (stringBuilder.toString().equals("")) {
+                this.machine.logErrorMessage(
+                        "The result from cmd: "
+                                + cmd + " is empty");
             }
 
         } catch (Exception e) {
@@ -429,15 +452,12 @@ public final class Schedule {
     }
 
     public Date getNextBackupTime() {
-        return nextBackupTime;
+        return new Date(this.nextBackupTime.getTime());
     }
 
     public void setNextBackupTime(
             final Date nextBackupTime
     ) {
-        this.nextBackupTime = nextBackupTime;
+        this.nextBackupTime = new Date(nextBackupTime.getTime());
     }
 }
-
-
-

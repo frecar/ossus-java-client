@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static java.lang.Thread.sleep;
-
 public final class APIHandler {
 
     public static final int MAX_ATTEMPTS = 10;
@@ -109,14 +107,13 @@ public final class APIHandler {
 
             while ((line = in.readLine()) != null) {
                 result.append(line);
-                sleep(1);
             }
 
             if (result.toString().equals("")) {
                 throw new OSSUSNoAPIConnectionException("Cant write data to API");
             }
 
-        } catch (OSSUSNoAPIConnectionException | InterruptedException | IOException e) {
+        } catch (OSSUSNoAPIConnectionException | IOException e) {
             e.printStackTrace();
         } finally {
             try {

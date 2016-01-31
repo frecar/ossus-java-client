@@ -162,8 +162,14 @@ public final class BackupJob {
     private void buildAndSetUploadPath(
             final Schedule schedule,
             final JSONObject storage
-    ) {
+    ) throws OSSUSNoAPIConnectionException {
         String uploadPath = (String) storage.get(ApiTrans.STORAGE_FOLDER.value);
+
+        if (uploadPath == null) {
+            throw new OSSUSNoAPIConnectionException(
+                    "Unable to fetch valid upload path from api"
+            );
+        }
 
         if (!uploadPath.endsWith("/")) {
             uploadPath += "/";
