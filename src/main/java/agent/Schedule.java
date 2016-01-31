@@ -294,6 +294,8 @@ public final class Schedule {
 
         filenameZip = filenameBackupZip.replace(fileSeparator, "_") + ".zip";
 
+        System.out.println("Making zip file: " + filenameZip);
+
         try {
             Zipper.zipDir(filenameZip, folderZip, machine);
         } catch (Exception e) {
@@ -394,6 +396,7 @@ public final class Schedule {
                     process.getInputStream(),
                     StandardCharsets.UTF_8
             );
+
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
@@ -407,13 +410,12 @@ public final class Schedule {
                 stringBuilder.append(line);
             }
 
-            if (stringBuilder.toString().equals("")) {
-                this.machine.logErrorMessage(
-                        "The result from cmd: "
-                                + cmd + " is empty");
+            if (!stringBuilder.toString().equals("")) {
+                this.machine.logErrorMessage("Result for cmd: " + cmd);
+                this.machine.logErrorMessage(stringBuilder.toString());
             }
 
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             this.machine.logErrorMessage(e.getMessage());
         } finally {
             if (buf != null) {
