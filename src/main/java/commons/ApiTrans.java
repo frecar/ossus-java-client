@@ -22,8 +22,6 @@ public enum ApiTrans {
     MACHINE_RUN_INSTALL("run_install"),
     MACHINE_IS_BUSY("is_busy"),
 
-    MACHINE_CURRENT_AGENT_VERSION("current_agent_version"),
-    MACHINE_SELECTED_AGENT_VERSION("selected_agent_version"),
     MACHINE_CURRENT_UPDATER_VERSION("current_updater_version"),
     MACHINE_SELECTED_UPDATER_VERSION("selected_updater_version"),
 
@@ -40,7 +38,14 @@ public enum ApiTrans {
     STORAGE_HOST("host"),
     STORAGE_USERNAME("username"),
     STORAGE_PASSWORD("password"),
-    STORAGE_FOLDER("folder"),;
+    STORAGE_FOLDER("folder"),
+    STORAGE_CURRENT_DAY_FOLDER_PATH("current_day_folder_path"),
+
+    BACKUP_ENTRY_TIME_STARTED("time_started"),
+    BACKUP_ENTRY_TIME_ENDED("upload_path"),
+    BACKUP_ENTRY_UPLOAD_PATH("upload_path"),
+    BACKUP_ENTRY_FILE_NAME("file_name"),
+    BACKUP_ENTRY_SCHEDULE_ID("schedule_id");
 
     public final String value;
 

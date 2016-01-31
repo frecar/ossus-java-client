@@ -6,10 +6,12 @@ import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
@@ -23,10 +25,8 @@ public final class Machine {
     public static final int MILLISECONDS_DIVIDER = 1000;
     public final String id;
 
-    private Version currentAgentVersion;
     private Version currentUpdaterVersion;
     public final Version selectedUpdaterVersion;
-    public final Version selectedAgentVersion;
     public final boolean autoUpdate;
 
     public final String serverIP;
@@ -86,10 +86,6 @@ public final class Machine {
         List<JSONObject> obj = apiHandler.getApiData("machines/" + this.id);
         JSONObject data = (JSONObject) obj.get(0).get("machine");
 
-        this.currentAgentVersion = Version.buildFromJson((JSONObject) data.get(
-                ApiTrans.MACHINE_CURRENT_AGENT_VERSION.value));
-        this.selectedAgentVersion = Version.buildFromJson((JSONObject) data.get(
-                ApiTrans.MACHINE_SELECTED_AGENT_VERSION.value));
         this.currentUpdaterVersion = Version.buildFromJson((JSONObject) data.get(
                 ApiTrans.MACHINE_CURRENT_UPDATER_VERSION.value));
         this.selectedUpdaterVersion = Version.buildFromJson((JSONObject) data.get(
@@ -102,16 +98,33 @@ public final class Machine {
 
     }
 
-    public boolean isBusy() {
+    public boolean isBusy() throws OSSUSNoAPIConnectionException {
         List<JSONObject> obj = apiHandler.getApiData("machines/" + this.id);
         JSONObject data = (JSONObject) obj.get(0).get("machine");
-        return (Boolean) data.get(ApiTrans.MACHINE_IS_BUSY.value);
+
+        if (data == null) {
+            throw new OSSUSNoAPIConnectionException("Can't read busy status");
+        }
+
+        Boolean response = (Boolean) data.get(ApiTrans.MACHINE_IS_BUSY.value);
+
+        if (response == null) {
+            throw new OSSUSNoAPIConnectionException("Can't read busy status");
+        } else {
+            return response;
+        }
     }
 
     public String getExternalIP() throws IOException {
-        URL whatismyip = new URL(serverIP + "/api/ip");
-        BufferedReader in = new BufferedReader(new InputStreamReader(whatismyip.openStream()));
-        return in.readLine();
+        URL url = new URL(serverIP + "/api/ip");
+        InputStream stream = url.openStream();
+        InputStreamReader inputStreamReader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+        BufferedReader in = new BufferedReader(inputStreamReader);
+        String result = in.readLine();
+        in.close();
+        inputStreamReader.close();
+        stream.close();
+        return result;
     }
 
     public static Machine buildFromSettings(final String settingsLocation) throws Exception {
@@ -120,9 +133,23 @@ public final class Machine {
 
         JSONParser parser = new JSONParser();
 
-        Object obj = parser.parse(new FileReader(settingsLocation));
-        JSONObject jsonObject = (JSONObject) obj;
+        FileInputStream fileInputStream = null;
+        InputStreamReader inputStreamReader = null;
 
+        JSONObject jsonObject = null;
+
+        try {
+            fileInputStream = new FileInputStream(settingsLocation);
+            inputStreamReader = new InputStreamReader(fileInputStream, StandardCharsets.UTF_8);
+            jsonObject = (JSONObject) parser.parse(inputStreamReader);
+        } finally {
+            if (inputStreamReader != null) {
+                inputStreamReader.close();
+            }
+            if (fileInputStream != null) {
+                fileInputStream.close();
+            }
+        }
 
         final List<ApiTrans> settingsFields = asList(
                 ApiTrans.MACHINE_ID,
@@ -147,20 +174,30 @@ public final class Machine {
         return currentUpdaterVersion;
     }
 
-    public void setMachineExternalIp(final String ipAddress) {
+    public void setMachineExternalIp(final String ipAddress) throws OSSUSNoAPIConnectionException {
         apiHandler.getApiData("machines/" + id + "/set_machine_external_ip/" + ipAddress);
     }
 
-    public boolean changesBusyStatus(final boolean busy) {
+    public boolean changesBusyStatus(final boolean busy) throws OSSUSNoAPIConnectionException {
         final String isBusy = busy ? "1" : "0";
-        final List<JSONObject> s = apiHandler.getApiData(
-                "machines/" + id + "/set_busy_updating/" + isBusy + "/session/" + this.session + "/"
+        final List<JSONObject> s = apiHandler.getApiData("machines/"
+                + id + "/set_busy_updating/"
+                + isBusy + "/session/" + this.session + "/"
         );
 
-        return (Boolean) s.get(0).get("changed_status");
+        Boolean response = (Boolean) s.get(0).get("changed_status");
+
+        if (response == null) {
+            return false;
+        } else {
+            return response;
+        }
+
     }
 
-    public void setCurrentUpdaterVersion(final Version currentUpdaterVersion) {
+    public void setCurrentUpdaterVersion(
+            final Version currentUpdaterVersion
+    ) throws OSSUSNoAPIConnectionException {
         this.currentUpdaterVersion = currentUpdaterVersion;
         apiHandler.getApiData(
                 "machines/" + id + "/set_updater_version/" + currentUpdaterVersion.id

@@ -6,12 +6,14 @@ import org.json.simple.JSONValue;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -55,39 +57,90 @@ public final class APIHandler {
             throw new OSSUSNoAPIConnectionException("Could not set api data");
         }
 
+        boolean successfullyReadAndClosed = true;
+
+        OutputStreamWriter wr = null;
+        InputStream content = null;
+        InputStreamReader inputStreamReader = null;
+        BufferedReader in = null;
+
         try {
 
             URL url = new URL(this.baseURL + urlPath);
 
-            String data = URLEncoder.encode("datetime", "UTF-8")
-                    + "=" + URLEncoder.encode(this.getDateTime(), "UTF-8")
-                    + "&api_user=" + apiUser + "&api_token=" + apiToken;
+            StringBuilder dataBuilder = new StringBuilder();
+
+            dataBuilder
+                    .append(URLEncoder.encode("datetime", "UTF-8"))
+                    .append("=")
+                    .append(URLEncoder.encode(this.getDateTime(), "UTF-8"))
+                    .append("&api_user=")
+                    .append(apiUser)
+                    .append("&api_token=")
+                    .append(apiToken);
+
 
             for (Entry<String, String> pairs : dataList.entrySet()) {
-                data += "&" + URLEncoder.encode(pairs.getKey(), "UTF-8")
-                        + "=" + URLEncoder.encode(pairs.getValue(), "UTF-8");
+                dataBuilder
+                        .append("&")
+                        .append(URLEncoder.encode(pairs.getKey(), "UTF-8"))
+                        .append("=")
+                        .append(URLEncoder.encode(pairs.getValue(), "UTF-8"));
             }
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
 
-            OutputStreamWriter wr = new OutputStreamWriter(connection.getOutputStream());
-            wr.write(data);
+            wr = new OutputStreamWriter(
+                    connection.getOutputStream(),
+                    StandardCharsets.UTF_8
+            );
+            wr.write(dataBuilder.toString());
             wr.flush();
 
-            InputStream content = connection.getInputStream();
-            BufferedReader in = new BufferedReader(new InputStreamReader(content));
+            content = connection.getInputStream();
 
-            while (in.readLine() != null) {
+            inputStreamReader = new InputStreamReader(content, StandardCharsets.UTF_8);
+            in = new BufferedReader(inputStreamReader);
+
+            StringBuilder result = new StringBuilder();
+            String line;
+
+            while ((line = in.readLine()) != null) {
+                result.append(line);
                 sleep(1);
             }
 
-        } catch (Exception e) {
+            if (result.toString().equals("")) {
+                throw new OSSUSNoAPIConnectionException("Cant write data to API");
+            }
+
+        } catch (OSSUSNoAPIConnectionException | InterruptedException | IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (wr != null) {
+                    wr.close();
+                }
+                if (content != null) {
+                    content.close();
+                }
+                if (in != null) {
+                    in.close();
+                }
+                if (inputStreamReader != null) {
+                    inputStreamReader.close();
+                }
+            } catch (IOException e) {
+                successfullyReadAndClosed = false;
+            }
+        }
+
+        if (!successfullyReadAndClosed) {
+            throw new OSSUSNoAPIConnectionException("Cannot write data to api");
         }
     }
-
 
     public void setApiData(
             final String urlPath,
@@ -98,11 +151,17 @@ public final class APIHandler {
 
     private String downloadDataFromUrl(
             final String u
-    ) {
+    ) throws OSSUSNoAPIConnectionException {
+
+        boolean validReadData = true;
 
         StringBuilder result = new StringBuilder();
-
         String finalPath = u;
+
+        HttpURLConnection connection = null;
+        InputStream content = null;
+        InputStreamReader inputStreamReader = null;
+        BufferedReader in = null;
 
         try {
 
@@ -112,16 +171,40 @@ public final class APIHandler {
 
             URL url = new URL(finalPath);
 
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
-            InputStream content = connection.getInputStream();
-            BufferedReader in = new BufferedReader(new InputStreamReader(content));
+            content = connection.getInputStream();
+            inputStreamReader = new InputStreamReader(content, StandardCharsets.UTF_8);
+            in = new BufferedReader(inputStreamReader);
+
             String line;
             while ((line = in.readLine()) != null) {
                 result.append(line);
             }
-        } catch (Exception e) {
+
+        } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                if (content != null) {
+                    content.close();
+                }
+                if (in != null) {
+                    in.close();
+                }
+                if (inputStreamReader != null) {
+                    inputStreamReader.close();
+                }
+            } catch (IOException e) {
+                validReadData = false;
+            }
+        }
+
+        if (!validReadData) {
+            throw new OSSUSNoAPIConnectionException("Cant download file");
         }
 
         return result.toString();
@@ -129,14 +212,12 @@ public final class APIHandler {
 
     public List<JSONObject> getApiData(
             final String urlPath
-    ) {
+    ) throws OSSUSNoAPIConnectionException {
 
         String url = this.baseURL + urlPath;
-        List<JSONObject> list = new ArrayList<JSONObject>();
+        List<JSONObject> list = new ArrayList<>();
 
-        Object obj = JSONValue.parse(
-                this.downloadDataFromUrl(url)
-        );
+        Object obj = JSONValue.parse(this.downloadDataFromUrl(url));
 
         try {
             list.add((JSONObject) obj);

@@ -10,8 +10,6 @@ import java.net.URL;
 
 public final class Updater extends GenericUpdater {
 
-    private final String updaterFileName = "Updater.jar";
-
     public Updater(final Machine machine) {
         super(machine);
     }
@@ -30,7 +28,7 @@ public final class Updater extends GenericUpdater {
     }
 
     protected String outFileName() {
-        return machine.agentFolder + updaterFileName;
+        return machine.agentFolder + "Updater.jar";
     }
 
     protected URL downloadLink(
@@ -46,7 +44,7 @@ public final class Updater extends GenericUpdater {
 
     protected void downloadDone(
             final Version newVersion
-    ) {
+    ) throws OSSUSNoAPIConnectionException {
         machine.setCurrentUpdaterVersion(newVersion);
     }
 }

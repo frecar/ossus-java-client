@@ -33,7 +33,9 @@ public abstract class GenericUpdater {
     protected abstract URL downloadLink(final Version v)
             throws OSSUSNoAPIConnectionException;
 
-    protected abstract void downloadDone(final Version newVersion);
+    protected abstract void downloadDone(
+            final Version newVersion
+    ) throws OSSUSNoAPIConnectionException;
 
     public final void run() throws OSSUSNoAPIConnectionException {
 

@@ -5,10 +5,12 @@ import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 import commons.exceptions.OSSUSNoFTPServerConnection;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,26 +28,28 @@ import static java.lang.Thread.sleep;
 public final class Schedule {
 
     public static final int MB_SIZE = 1024;
-    private String id;
+    private Long id;
     private String name;
     private Boolean runningBackup;
     private Boolean runningRestore;
-    private String currentVersionInLoop;
-    private String versionsCount;
+
+    private Long currentVersionInLoop;
+    private Long versionsCount;
+
     private String uploadPath;
     private Date nextBackupTime;
 
     private FTPStorage storage;
     private Machine machine;
 
-    private List<FolderBackup> folderBackups = new ArrayList<FolderBackup>();
-    private List<SQLBackup> sqlBackups = new ArrayList<SQLBackup>();
+    private List<FolderBackup> folderBackups = new ArrayList<>();
+    private List<SQLBackup> sqlBackups = new ArrayList<>();
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(final String id) {
+    public void setId(final Long id) {
         this.id = id;
     }
 
@@ -73,15 +77,15 @@ public final class Schedule {
     }
 
     public void setCurrentVersionInLoop(
-            final String string
+            final Long value
     ) {
-        this.currentVersionInLoop = string;
+        this.currentVersionInLoop = value;
     }
 
     public void setVersionsCount(
-            final String string
+            final Long value
     ) {
-        this.versionsCount = string;
+        this.versionsCount = value;
     }
 
     public void setUploadPath(
@@ -106,13 +110,13 @@ public final class Schedule {
         this.machine = machine;
     }
 
-    private int findNextCurrentVersionInLoop() {
+    private Long findNextCurrentVersionInLoop() {
 
-        if (Integer.parseInt(this.currentVersionInLoop) >= Integer.parseInt(this.versionsCount)) {
-            return 1;
+        if (this.currentVersionInLoop >= this.versionsCount) {
+            return 1L;
         }
 
-        return Integer.parseInt(this.currentVersionInLoop) + 1;
+        return this.currentVersionInLoop + 1;
 
     }
 
@@ -140,11 +144,11 @@ public final class Schedule {
     ) throws OSSUSNoAPIConnectionException {
 
         HashMap<String, String> map = new HashMap<>();
-        map.put("schedule_id", "" + this.id);
-        map.put("time_started", start);
-        map.put("time_ended", end);
-        map.put("uploadPath", this.uploadPath);
-        map.put("file_name", fileName);
+        map.put(ApiTrans.BACKUP_ENTRY_SCHEDULE_ID.value, "" + this.id);
+        map.put(ApiTrans.BACKUP_ENTRY_TIME_STARTED.value, start);
+        map.put(ApiTrans.BACKUP_ENTRY_TIME_ENDED.value, end);
+        map.put(ApiTrans.BACKUP_ENTRY_UPLOAD_PATH.value, this.uploadPath);
+        map.put(ApiTrans.BACKUP_ENTRY_FILE_NAME.value, fileName);
 
         this.machine.logInfoMessage("Create backup entry "
                 + this.name + " started at "
@@ -191,14 +195,14 @@ public final class Schedule {
             final SQLBackup sqlBackup
     ) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
 
-        String filenameZip;
+        final String filenameZip;
         this.machine.logInfoMessage("Performing "
                 + sqlBackup.getType() + " backup of "
                 + sqlBackup.getDatabase() + " at "
                 + sqlBackup.getHost());
 
-        String folderZip = tmpFolder + sqlBackup.getDatabase() + fileSeparator;
-        File f = new File(folderZip);
+        final String folderZip = tmpFolder + sqlBackup.getDatabase() + fileSeparator;
+        final File f = new File(folderZip);
 
         String filenameBackupZip = "";
 
@@ -222,16 +226,22 @@ public final class Schedule {
                     machine.logErrorMessage("Error deleting old sql file");
                 }
 
+                final String filenameBackupZipFinal = filenameBackupZip;
                 executeCmd = this.machine.mysqlDumpCommand
                         + " --single-transaction --user='"
                         + sqlBackup.getUsername() + "' --host='"
                         + sqlBackup.getHost() + "' --password='"
                         + sqlBackup.getPassword() + "' "
                         + sqlBackup.getDatabase() + " > "
-                        + filenameBackupZip;
+                        + filenameBackupZipFinal;
 
-                System.out.println(executeCmd);
-                this.execShellCmd(executeCmd);
+                try {
+                    this.execShellCmd(executeCmd);
+                } catch (IOException e) {
+                    this.machine.logErrorMessage(
+                            "Failed to perform SQL backup: " + this.getName()
+                    );
+                }
             } else {
                 filenameBackupZip = folderZip + sqlBackup.getDatabase() + ".bak";
 
@@ -252,13 +262,15 @@ public final class Schedule {
                         sqlBackup.getPassword());
 
                 conn.setAutoCommit(true);
-                Statement select = conn.createStatement();
 
-                select.executeQuery("BACKUP DATABASE " + sqlBackup.getDatabase()
+                ResultSet result = conn.createStatement().executeQuery("BACKUP DATABASE "
+                        + sqlBackup.getDatabase()
                         + " TO DISK='" + filenameBackupZip + "'");
-                conn.close();
+
+                result.close();
 
             }
+
         } catch (SQLException e) {
             machine.logErrorMessage(e.getMessage());
         } catch (ClassNotFoundException e) {
@@ -353,19 +365,46 @@ public final class Schedule {
 
     public void execShellCmd(
             final String cmd
-    ) throws OSSUSNoAPIConnectionException {
+    ) throws OSSUSNoAPIConnectionException, IOException {
+        Runtime runtime = null;
+        Process process = null;
+        BufferedReader buf = null;
+        InputStreamReader inputStreamReader = null;
+
         try {
-            Runtime runtime = Runtime.getRuntime();
-            Process process = runtime.exec(new String[]{"/bin/bash", "-c", cmd});
-            //int exitValue = process.waitFor();
-            BufferedReader buf = new BufferedReader(
-                    new InputStreamReader(process.getInputStream())
+            runtime = Runtime.getRuntime();
+            process = runtime.exec(new String[]{"/bin/bash", "-c", cmd});
+            inputStreamReader = new InputStreamReader(
+                    process.getInputStream(),
+                    StandardCharsets.UTF_8
             );
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0) {
+                this.machine.logErrorMessage("Failed to execute command: " + cmd);
+            }
+
+            buf = new BufferedReader(inputStreamReader);
+
             while (buf.readLine() != null) {
                 sleep(1);
             }
+
         } catch (Exception e) {
             this.machine.logErrorMessage(e.getMessage());
+        } finally {
+            if (buf != null) {
+                buf.close();
+            }
+            if (inputStreamReader != null) {
+                inputStreamReader.close();
+            }
+            if (process != null) {
+                process.destroy();
+            }
+            if (runtime != null) {
+                runtime.exit(0);
+            }
         }
     }
 

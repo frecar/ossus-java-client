@@ -54,11 +54,11 @@ public final class BackupJob {
         }
 
         try {
-
-            for (Object jsonObject : jsonArray) {
-                schedules.add((JSONObject) jsonObject);
+            if (jsonArray != null) {
+                for (Object jsonObject : jsonArray) {
+                    schedules.add((JSONObject) jsonObject);
+                }
             }
-
             addSchedules(schedules);
         } catch (ParseException e) {
             machine.logErrorMessage("Error getting schedules:\n" + e.getMessage());
@@ -75,18 +75,17 @@ public final class BackupJob {
 
         for (Object o : schedules) {
             JSONObject obj = (JSONObject) o;
-            machine.logInfoMessage("Adding schedule: " + obj.get("name").toString());
+            machine.logInfoMessage("Adding schedule: " + obj.get("name"));
             Schedule schedule = new Schedule();
-            schedule.setId(obj.get(ApiTrans.SCHEDULE_ID.value).toString());
-            schedule.setName(obj.get(ApiTrans.SCHEDULE_NAME.value).toString());
+
+            schedule.setId((Long) obj.get(ApiTrans.SCHEDULE_ID.value));
+            schedule.setName((String) obj.get(ApiTrans.SCHEDULE_NAME.value));
 
             schedule.setCurrentVersionInLoop(
-                    obj.get(
-                            ApiTrans.SCHEDULE_CURRENT_VERSION_IN_LOOP.value
-                    ).toString()
+                    (Long) obj.get(ApiTrans.SCHEDULE_CURRENT_VERSION_IN_LOOP.value)
             );
 
-            schedule.setVersionsCount(obj.get(ApiTrans.SCHEDULE_VERSIONS_COUNT.value).toString());
+            schedule.setVersionsCount((Long) obj.get(ApiTrans.SCHEDULE_VERSIONS_COUNT.value));
             schedule.setMachine(machine);
 
             String nextBackupTimeString = obj.get(
@@ -108,10 +107,7 @@ public final class BackupJob {
                             (String) storage.get(ApiTrans.STORAGE_FOLDER.value)
                     ));
 
-            schedule.setUploadPath(
-                    storage.get(ApiTrans.STORAGE_FOLDER)
-                            + "/" + storage.get("current_day_folder_path")
-            );
+            buildAndSetUploadPath(schedule, storage);
 
             schedule.setRunningBackup(
                     obj.get(
@@ -161,6 +157,20 @@ public final class BackupJob {
             machine.logInfoMessage("Schedule added " + schedule.getName());
             this.schedules.add(schedule);
         }
+    }
+
+    private void buildAndSetUploadPath(
+            final Schedule schedule,
+            final JSONObject storage
+    ) {
+        String uploadPath = (String) storage.get(ApiTrans.STORAGE_FOLDER.value);
+
+        if (!uploadPath.endsWith("/")) {
+            uploadPath += "/";
+        }
+
+        uploadPath += storage.get(ApiTrans.STORAGE_CURRENT_DAY_FOLDER_PATH.value);
+        schedule.setUploadPath(uploadPath);
     }
 
     public void runBackup() throws OSSUSNoAPIConnectionException {

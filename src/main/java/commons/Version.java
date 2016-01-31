@@ -11,12 +11,12 @@ public final class Version {
     public final String id;
 
     private Version(
-            final String id,
+            final Long id,
             final String name,
             final String updateLink,
             final String agentLink
     ) {
-        this.id = id;
+        this.id = id.toString();
         this.name = name;
         this.updaterLink = updateLink;
         this.agentLink = agentLink;
@@ -26,10 +26,10 @@ public final class Version {
             final JSONObject json
     ) throws OSSUSNoAPIConnectionException {
         return new Version(
-                json.get(ApiTrans.VERSION_ID.value).toString(),
+                (Long) json.get(ApiTrans.VERSION_ID.value),
                 (String) json.get(ApiTrans.VERSION_NAME.value),
-                (String) json.get(ApiTrans.VERSION_UPDATER_LINK.value), (
-                String) json.get(ApiTrans.VERSION_AGENT_LINK.value)
+                (String) json.get(ApiTrans.VERSION_UPDATER_LINK.value),
+                (String) json.get(ApiTrans.VERSION_AGENT_LINK.value)
         );
     }
 

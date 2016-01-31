@@ -83,8 +83,10 @@ public class Zipper {
 
         if (file.isDirectory()) {
             File[] files = file.listFiles();
-            for (File file2 : files) {
-                recurseFiles(root, file2, zaos, absolute);
+            if (files != null) {
+                for (File file2 : files) {
+                    recurseFiles(root, file2, zaos, absolute);
+                }
             }
         } else if (!file.getName().endsWith(".zip") && !file.getName().endsWith(".ZIP")) {
             String filename;
