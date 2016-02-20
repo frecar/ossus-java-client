@@ -81,13 +81,17 @@ public class Agent {
     ) throws
             OSSUSNoAPIConnectionException {
 
+        machine.logInfoMessage("Starting to report uptime");
         try {
             long uptime = Uptime.getSystemUptime();
+            machine.logInfoMessage("Reporting " + uptime + " minutes uptime");
             machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
         } catch (ParseException | IOException e) {
+            machine.logErrorMessage("Failed to report uptime");
+            machine.logErrorMessage(e.getMessage());
             throw new OSSUSNoAPIConnectionException("Error reading data for uptime");
         }
-
+        System.exit(0);
     }
 
     private static void reportMachineStats(

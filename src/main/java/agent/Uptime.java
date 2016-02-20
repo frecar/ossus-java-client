@@ -46,7 +46,7 @@ public class Uptime {
         )) {
             String line = in.readLine();
             if (line != null) {
-                Pattern parse = Pattern.compile("((\\d+) days,)? (\\d+):(\\d+)");
+                Pattern parse = Pattern.compile("((\\d+) days,)?[\\s]*(\\d+):(\\d+),");
                 Matcher matcher = parse.matcher(line);
                 if (matcher.find()) {
                     String parsedDays = matcher.group(2);
@@ -60,7 +60,6 @@ public class Uptime {
             }
         }
         return uptime;
-
     }
 
     public static long getSystemUptime() throws IOException, ParseException {
