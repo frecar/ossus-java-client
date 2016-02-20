@@ -1,9 +1,15 @@
 import agent.BackupJob;
 import agent.MachineStats;
 import agent.Updater;
+import agent.Uptime;
 import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 import commons.exceptions.OSSUSNoFTPServerConnection;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Agent {
 
@@ -29,6 +35,8 @@ public class Agent {
             }
 
             machine.logInfoMessage("Checking if machine is busy, and set to busy if available");
+
+            Agent.reportUptime(machine);
 
             if (!machine.isBusy() && machine.changesBusyStatus(true)) {
                 machine.logInfoMessage("Agent: Set busy!");
@@ -68,6 +76,20 @@ public class Agent {
             e.printStackTrace();
         }
         System.exit(0);
+    }
+
+    private static void reportUptime(
+            final Machine machine
+    ) throws
+            OSSUSNoAPIConnectionException {
+
+        try {
+            long uptime = Uptime.getSystemUptime();
+            machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
+        } catch (ParseException|IOException e) {
+            throw new OSSUSNoAPIConnectionException("Error reading data for uptime");
+        }
+
     }
 
     private static void reportMachineStats(
