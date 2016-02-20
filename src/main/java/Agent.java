@@ -91,7 +91,6 @@ public class Agent {
             machine.logErrorMessage(e.getMessage());
             throw new OSSUSNoAPIConnectionException("Error reading data for uptime");
         }
-        System.exit(0);
     }
 
     private static void reportMachineStats(

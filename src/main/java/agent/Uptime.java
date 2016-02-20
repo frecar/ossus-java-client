@@ -7,30 +7,56 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Uptime {
 
 
-    private static long getSystemUptimeWindows() throws IOException, ParseException {
+    private static long parseWindowsTime(String dateFormat, String line) {
+        SimpleDateFormat format = new SimpleDateFormat(dateFormat);
+        Date boottime;
+        try {
+            boottime = format.parse(line);
+        } catch (ParseException e) {
+            return 0;
+        }
+        return (System.currentTimeMillis() - boottime.getTime()) / 1000;
+    }
+
+    private static long getSystemUptimeWindows() throws IOException {
         long uptime = 0;
+
+        List<String> parseFormst = new ArrayList<>();
+        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm:ss a");
+        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm:ss");
+        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm");
+        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm:ss a");
+        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm:ss");
+        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm");
 
         Process uptimeProc = Runtime.getRuntime().exec("net stats srv");
 
         try (BufferedReader in = new BufferedReader(
                 new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
         )) {
+            String data = "";
             String line;
-            while ((line = in.readLine()) != null) {
+            while (in.readLine() != null) {
+                line = in.readLine();
                 if (line.startsWith("Statistics since")) {
-                    SimpleDateFormat format = new SimpleDateFormat(
-                            "'Statistics since' MM/dd/yyyy hh:mm:ss a"
-                    );
-                    Date boottime = format.parse(line);
-                    uptime = (System.currentTimeMillis() - boottime.getTime()) / 1000;
-                    break;
+                    data = line;
+                }
+            }
+            if (!data.equals("")) {
+                for (String dateFormat : parseFormst) {
+                    uptime = parseWindowsTime(dateFormat, data);
+                    if (uptime > 0) {
+                        break;
+                    }
                 }
             }
         }
