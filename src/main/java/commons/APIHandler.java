@@ -109,8 +109,13 @@ public final class APIHandler {
                 result.append(line);
             }
 
+            if (connection.getResponseCode() != 200) {
+                throw new OSSUSNoAPIConnectionException("Invalid response code: "
+                        + connection.getResponseCode());
+            }
+
             if (result.toString().equals("")) {
-                throw new OSSUSNoAPIConnectionException("Cant write data to API");
+                throw new OSSUSNoAPIConnectionException("No response from api");
             }
 
         } catch (OSSUSNoAPIConnectionException | IOException e) {

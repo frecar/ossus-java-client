@@ -42,7 +42,7 @@ public enum ApiTrans {
     STORAGE_CURRENT_DAY_FOLDER_PATH("current_day_folder_path"),
 
     BACKUP_ENTRY_TIME_STARTED("time_started"),
-    BACKUP_ENTRY_TIME_ENDED("upload_path"),
+    BACKUP_ENTRY_TIME_ENDED("time_ended"),
     BACKUP_ENTRY_UPLOAD_PATH("upload_path"),
     BACKUP_ENTRY_FILE_NAME("file_name"),
     BACKUP_ENTRY_SCHEDULE_ID("schedule_id");
