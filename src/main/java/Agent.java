@@ -8,8 +8,6 @@ import commons.exceptions.OSSUSNoFTPServerConnection;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class Agent {
 
@@ -86,7 +84,7 @@ public class Agent {
         try {
             long uptime = Uptime.getSystemUptime();
             machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
-        } catch (ParseException|IOException e) {
+        } catch (ParseException | IOException e) {
             throw new OSSUSNoAPIConnectionException("Error reading data for uptime");
         }
 
