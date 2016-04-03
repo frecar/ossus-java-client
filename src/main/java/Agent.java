@@ -10,7 +10,7 @@ import commons.exceptions.OSSUSNoFTPServerConnection;
 public class Agent {
 
     // Timeout Agent after 3 hours
-    static int AGENT_TIMEOUT = 3*60*60*1000;
+    static final int AGENT_TIMEOUT = 3 * 60 * 60 * 1000;
 
     public static void main(
             final String[] args
@@ -18,11 +18,7 @@ public class Agent {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    run_main(args);
-                } catch (Exception e) {
-                    System.exit(1);
-                }
+                runMain(args);
             }
         });
         thread.start();
@@ -34,15 +30,15 @@ public class Agent {
             }
             try {
                 Thread.sleep(500);
+            } catch (InterruptedException ignored) {
             }
-            catch (InterruptedException ignored) {}
         }
     }
 
-    public static void run_main(
+    public static void runMain(
             final String[] args
-    ) throws Exception {
-
+    ) {
+        try {
             String settingsLocation;
 
             if (args.length > 0) {
@@ -97,7 +93,9 @@ public class Agent {
             } else {
                 machine.logWarningMessage("Agent: Machine busy, skipping!");
             }
-
+        } catch (Exception e) {
+            System.err.println("Error occured: " + e.getMessage());
+        }
     }
 
     private static void reportUptime(
@@ -125,6 +123,7 @@ public class Agent {
             e.printStackTrace();
             System.exit(0);
         }
+
     }
 
     private static Machine buildMachineFromSettings(

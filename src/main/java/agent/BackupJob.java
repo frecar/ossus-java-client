@@ -185,11 +185,10 @@ public final class BackupJob {
             machine.logWarningMessage("No schedules to run, have you set up any?");
         } else {
             for (Schedule schedule : this.schedules) {
-                machine.logInfoMessage("Checking if job scheduled to run: "
-                        + schedule.getName());
+                machine.logInfoMessage("Checking if job scheduled to run: " + schedule.getName());
 
                 if (new Date().after(schedule.getNextBackupTime())) {
-                    machine.logInfoMessage("Running schedule "+ schedule.getName());
+                    machine.logInfoMessage("Running schedule " + schedule.getName());
 
                     if (!schedule.getRunningBackup()) {
                         schedule.setRunningBackup(true);
@@ -197,8 +196,8 @@ public final class BackupJob {
 
                         try {
                             schedule.runBackup();
-                        } catch (OSSUSNoFTPServerConnection|OSSUSNoAPIConnectionException e ) {
-                            machine.logErrorMessage("Running schedule " + schedule.getName() + " failed");
+                        } catch (OSSUSNoFTPServerConnection | OSSUSNoAPIConnectionException e) {
+                            machine.logErrorMessage("Schedule run failed: " + schedule.getName());
                             machine.logErrorMessage(e.getMessage());
                         }
 

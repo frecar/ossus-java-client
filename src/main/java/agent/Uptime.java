@@ -1,9 +1,7 @@
 package agent;
 
-
 import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,10 +18,13 @@ import java.util.regex.Pattern;
 
 public class Uptime {
 
-    public static long parseWindowsTime(Machine machine, String dateFormat, String line)
-            throws OSSUSNoAPIConnectionException {
-        SimpleDateFormat format = new SimpleDateFormat(dateFormat);
-        Date boottime;
+    public static long parseWindowsTime(
+            final Machine machine,
+            final String dateFormat,
+            final String line
+    ) throws OSSUSNoAPIConnectionException {
+        final SimpleDateFormat format = new SimpleDateFormat(dateFormat);
+        final Date boottime;
         try {
             boottime = format.parse(line);
         } catch (ParseException e) {
@@ -35,7 +36,9 @@ public class Uptime {
         return TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - boottime.getTime());
     }
 
-    private static long getSystemUptimeWindows(Machine machine) throws OSSUSNoAPIConnectionException {
+    private static long getSystemUptimeWindows(
+            final Machine machine
+    ) throws OSSUSNoAPIConnectionException {
         long uptime = 0;
 
         List<String> parseFormats = new ArrayList<>();
@@ -73,10 +76,13 @@ public class Uptime {
                         new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
                 )) {
                     String data = "";
-                    String line;
-                    while (in.readLine() != null) {
-                        line = in.readLine();
-                        if (line.startsWith("Statistics since") || line.startsWith("Statistikk siden")) {
+                    while (true) {
+                        final String line = in.readLine();
+                        if(line == null) {
+                            break;
+                        }
+                        if (line.startsWith("Statistics since")
+                                || line.startsWith("Statistikk siden")) {
                             data = line;
                             break;
                         }
@@ -103,7 +109,9 @@ public class Uptime {
         return uptime;
     }
 
-    private static long getSystemUptimeOther(Machine machine) throws OSSUSNoAPIConnectionException {
+    private static long getSystemUptimeOther(
+            final Machine machine
+    ) throws OSSUSNoAPIConnectionException {
         long uptime = 0;
         Process uptimeProc = null;
         try {
@@ -143,7 +151,9 @@ public class Uptime {
         return uptime;
     }
 
-    public static long getSystemUptime(Machine machine) throws OSSUSNoAPIConnectionException {
+    public static long getSystemUptime(
+            final Machine machine
+    ) throws OSSUSNoAPIConnectionException {
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {
             return getSystemUptimeWindows(machine);
