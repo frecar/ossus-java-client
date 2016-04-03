@@ -13,11 +13,11 @@ import java.io.File;
 import java.io.IOException;
 
 public final class FTPStorage {
-    public FTPClient client;
+    private FTPClient client;
     private String homeFolder;
     private Machine machine;
 
-    private String host;
+    public final String host;
     private String username;
     private String password;
 
@@ -35,29 +35,47 @@ public final class FTPStorage {
         this.password = password;
         this.homeFolder = folder;
         this.machine = machine;
-        this.reconnect();
     }
 
-    public void reconnect() throws
+    private void reconnect() throws
             OSSUSNoAPIConnectionException,
             OSSUSNoFTPServerConnection {
         try {
-            this.machine.logInfoMessage("Connecting to FTP Server");
+            this.machine.logInfoMessage("Connecting to FTP Server at: " + this.host);
             this.client = new FTPClient();
             this.client.connect(this.host);
             this.client.login(this.username, this.password);
             this.machine.logInfoMessage("Successfully connected to FTP Server");
         } catch (Exception e) {
             this.machine.logErrorMessage(e.getMessage());
-            this.machine.logErrorMessage("FTP Server is unavailable,"
-                    + " terminating this session and set machine not busy");
+            this.machine.logErrorMessage(
+                    "FTP Server is unavailable,"
+                            + " terminating this session and set machine not busy"
+            );
             throw new OSSUSNoFTPServerConnection("FTP Server is unavailable");
+        }
+    }
+
+    private void ensureConnected() throws OSSUSNoFTPServerConnection, OSSUSNoAPIConnectionException {
+        this.machine.logInfoMessage("Verifying FTP Connection");
+        if (this.client == null) {
+            this.machine.logInfoMessage(
+                    "No FTP server configured, connects for the first time"
+            );
+            this.reconnect();
+        } else if (!this.client.isConnected()) {
+            this.machine.logInfoMessage("FTP is not connected, reconnecting");
+            this.reconnect();
+        } else {
+            this.machine.logInfoMessage("FTP server is connected!");
         }
     }
 
     public void createFolder(
             final String folder
-    ) throws OSSUSNoAPIConnectionException {
+    ) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
+        this.ensureConnected();
+
         try {
             this.client.changeDirectory(this.homeFolder);
         } catch (Exception e2) {
@@ -89,6 +107,8 @@ public final class FTPStorage {
             final String localFile,
             final int restartAttempts
     ) throws OSSUSNoAPIConnectionException, OSSUSNoFTPServerConnection {
+        this.ensureConnected();
+
         int maxRestartAttempts = 3;
 
         try {

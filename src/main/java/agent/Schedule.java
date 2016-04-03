@@ -360,7 +360,7 @@ public final class Schedule {
         this.machine.logInfoMessage("Uploading "
                 + tmpFolder + filenameZip
                 + " to " + this.uploadPath
-                + " server: " + ftpStorage.client.getHost()
+                + " server: " + ftpStorage.host
         );
 
         ftpStorage.upload(
