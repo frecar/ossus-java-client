@@ -6,16 +6,43 @@ import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 import commons.exceptions.OSSUSNoFTPServerConnection;
 
-import java.io.IOException;
-import java.text.ParseException;
 
 public class Agent {
+
+    // Timeout Agent after 3 hours
+    static int AGENT_TIMEOUT = 3*60*60*1000;
 
     public static void main(
             final String[] args
     ) {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    run_main(args);
+                } catch (Exception e) {
+                    System.exit(1);
+                }
+            }
+        });
+        thread.start();
+        long endTimeMillis = System.currentTimeMillis() + AGENT_TIMEOUT;
+        while (thread.isAlive()) {
+            if (System.currentTimeMillis() > endTimeMillis) {
+                System.err.println("TIMED OUT AFTER " + AGENT_TIMEOUT + "ms");
+                System.exit(1);
+            }
+            try {
+                Thread.sleep(500);
+            }
+            catch (InterruptedException ignored) {}
+        }
+    }
 
-        try {
+    public static void run_main(
+            final String[] args
+    ) throws Exception {
+
             String settingsLocation;
 
             if (args.length > 0) {
@@ -32,9 +59,9 @@ public class Agent {
                 System.exit(0);
             }
 
-            machine.logInfoMessage("Checking if machine is busy, and set to busy if available");
-
             Agent.reportUptime(machine);
+
+            machine.logInfoMessage("Checking if machine is busy, and set to busy if available");
 
             if (!machine.isBusy() && machine.changesBusyStatus(true)) {
                 machine.logInfoMessage("Agent: Set busy!");
@@ -70,27 +97,17 @@ public class Agent {
             } else {
                 machine.logWarningMessage("Agent: Machine busy, skipping!");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.exit(0);
+
     }
 
     private static void reportUptime(
             final Machine machine
     ) throws
             OSSUSNoAPIConnectionException {
-
         machine.logInfoMessage("Starting to report uptime");
-        try {
-            long uptime = Uptime.getSystemUptime();
-            machine.logInfoMessage("Reporting " + uptime + " minutes uptime");
-            machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
-        } catch (ParseException | IOException e) {
-            machine.logErrorMessage("Failed to report uptime");
-            machine.logErrorMessage(e.getMessage());
-            throw new OSSUSNoAPIConnectionException("Error reading data for uptime");
-        }
+        long uptime = Uptime.getSystemUptime(machine);
+        machine.logInfoMessage("Reporting " + uptime + " minutes uptime");
+        machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
     }
 
     private static void reportMachineStats(
@@ -106,23 +123,20 @@ public class Agent {
             machine.logErrorMessage("Failed to report machine stats");
             machine.logErrorMessage(e.getMessage());
             e.printStackTrace();
-            System.exit(1);
+            System.exit(0);
         }
     }
 
     private static Machine buildMachineFromSettings(
             final String settingsLocation
     ) {
-
         Machine machine = null;
-
         try {
             machine = Machine.buildFromSettings(settingsLocation);
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
+            System.exit(0);
         }
-
         return machine;
     }
 }

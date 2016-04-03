@@ -1,6 +1,10 @@
 package agent;
 
 
+import commons.Machine;
+import commons.exceptions.OSSUSNoAPIConnectionException;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,90 +14,141 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Uptime {
 
-
-    private static long parseWindowsTime(String dateFormat, String line) {
+    public static long parseWindowsTime(Machine machine, String dateFormat, String line)
+            throws OSSUSNoAPIConnectionException {
         SimpleDateFormat format = new SimpleDateFormat(dateFormat);
         Date boottime;
         try {
             boottime = format.parse(line);
         } catch (ParseException e) {
+            machine.logWarningMessage("Failed to parse uptime information");
+            machine.logWarningMessage("Date format: " + dateFormat);
+            machine.logWarningMessage("Line to parse: " + line);
             return 0;
         }
-        return (System.currentTimeMillis() - boottime.getTime()) / 1000;
+        return TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - boottime.getTime());
     }
 
-    private static long getSystemUptimeWindows() throws IOException {
+    private static long getSystemUptimeWindows(Machine machine) throws OSSUSNoAPIConnectionException {
         long uptime = 0;
 
-        List<String> parseFormst = new ArrayList<>();
-        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm:ss a");
-        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm:ss");
-        parseFormst.add("'Statistics since' MM/dd/yyyy hh:mm");
-        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm:ss a");
-        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm:ss");
-        parseFormst.add("'Statistics since' dd/MM/yyyy hh:mm");
+        List<String> parseFormats = new ArrayList<>();
+        parseFormats.add("'Statistics since' dd.MM.yyyy hh:mm");
+        parseFormats.add("'Statistics since' dd.MM.yyyy hh:mm a");
+        parseFormats.add("'Statistics since' dd.MM.yyyy hh:mm:ss");
+        parseFormats.add("'Statistics since' dd.MM.yyyy hh:mm:ss a");
 
-        Process uptimeProc = Runtime.getRuntime().exec("net stats srv");
+        parseFormats.add("'Statistics since' MM/dd/yyyy hh:mm");
+        parseFormats.add("'Statistics since' MM/dd/yyyy hh:mm a");
+        parseFormats.add("'Statistics since' MM/dd/yyyy hh:mm:ss");
+        parseFormats.add("'Statistics since' MM/dd/yyyy hh:mm:ss a");
 
-        try (BufferedReader in = new BufferedReader(
-                new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
-        )) {
-            String data = "";
-            String line;
-            while (in.readLine() != null) {
-                line = in.readLine();
-                if (line.startsWith("Statistics since")) {
-                    data = line;
+        parseFormats.add("'Statistikk siden' dd.MM.yyyy hh:mm");
+        parseFormats.add("'Statistikk siden' dd.MM.yyyy hh:mm a");
+        parseFormats.add("'Statistikk siden' dd.MM.yyyy hh:mm:ss");
+        parseFormats.add("'Statistikk siden' dd.MM.yyyy hh:mm:ss a");
+
+        parseFormats.add("'Statistikk siden' MM/dd/yyyy hh:mm");
+        parseFormats.add("'Statistikk siden' MM/dd/yyyy hh:mm a");
+        parseFormats.add("'Statistikk siden' MM/dd/yyyy hh:mm:ss");
+        parseFormats.add("'Statistikk siden' MM/dd/yyyy hh:mm:ss a");
+
+        Process uptimeProc = null;
+        try {
+            uptimeProc = Runtime.getRuntime().exec("net stats srv");
+        } catch (IOException e) {
+            machine.logErrorMessage("Failed to execute: net stats srv command");
+            machine.logErrorMessage(e.getMessage());
+        }
+
+        try {
+            if (uptimeProc != null) {
+                try (BufferedReader in = new BufferedReader(
+                        new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
+                )) {
+                    String data = "";
+                    String line;
+                    while (in.readLine() != null) {
+                        line = in.readLine();
+                        if (line.startsWith("Statistics since") || line.startsWith("Statistikk siden")) {
+                            data = line;
+                            break;
+                        }
+                    }
+                    if (!data.equals("")) {
+                        for (String dateFormat : parseFormats) {
+                            uptime = parseWindowsTime(machine, dateFormat, data);
+                            if (uptime > 0) {
+                                break;
+                            }
+                        }
+                    }
+                    machine.logErrorMessage("Unable to parse uptime information: " + data);
                 }
+            } else {
+                machine.logErrorMessage(
+                        "Failed to parse uptime information, proc information unavailable"
+                );
             }
-            if (!data.equals("")) {
-                for (String dateFormat : parseFormst) {
-                    uptime = parseWindowsTime(dateFormat, data);
-                    if (uptime > 0) {
-                        break;
+        } catch (IOException e) {
+            machine.logErrorMessage("Failed to parse uptime information");
+            machine.logErrorMessage(e.getMessage());
+        }
+        return uptime;
+    }
+
+    private static long getSystemUptimeOther(Machine machine) throws OSSUSNoAPIConnectionException {
+        long uptime = 0;
+        Process uptimeProc = null;
+        try {
+            uptimeProc = Runtime.getRuntime().exec("uptime");
+        } catch (IOException e) {
+            machine.logErrorMessage("Failed to execute uptime command");
+            machine.logErrorMessage(e.getMessage());
+        }
+
+        if (uptimeProc != null) {
+            try (BufferedReader in = new BufferedReader(
+                    new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
+            )) {
+                String line = in.readLine();
+                if (line != null) {
+                    Pattern parse = Pattern.compile("((\\d+) days,)?[\\s]*(\\d+):(\\d+),");
+                    Matcher matcher = parse.matcher(line);
+                    if (matcher.find()) {
+                        String parsedDays = matcher.group(2);
+                        String parsedHours = matcher.group(3);
+                        String parsedMinutes = matcher.group(4);
+                        int days = parsedDays != null ? Integer.parseInt(parsedDays) : 0;
+                        int hours = parsedHours != null ? Integer.parseInt(parsedHours) : 0;
+                        int minutes = parsedMinutes != null ? Integer.parseInt(parsedMinutes) : 0;
+                        uptime = minutes + (hours * 60) + (days * 1440);
                     }
                 }
+            } catch (IOException e) {
+                machine.logErrorMessage("Failed to parse uptime information");
+                machine.logErrorMessage(e.getMessage());
             }
+        } else {
+            machine.logErrorMessage(
+                    "Failed to parse uptime information, proc information unavailable"
+            );
         }
         return uptime;
     }
 
-    private static long getSystemUptimeOther() throws IOException {
-        long uptime = 0;
-        Process uptimeProc = Runtime.getRuntime().exec("uptime");
-
-        try (BufferedReader in = new BufferedReader(
-                new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
-        )) {
-            String line = in.readLine();
-            if (line != null) {
-                Pattern parse = Pattern.compile("((\\d+) days,)?[\\s]*(\\d+):(\\d+),");
-                Matcher matcher = parse.matcher(line);
-                if (matcher.find()) {
-                    String parsedDays = matcher.group(2);
-                    String parsedHours = matcher.group(3);
-                    String parsedMinutes = matcher.group(4);
-                    int days = parsedDays != null ? Integer.parseInt(parsedDays) : 0;
-                    int hours = parsedHours != null ? Integer.parseInt(parsedHours) : 0;
-                    int minutes = parsedMinutes != null ? Integer.parseInt(parsedMinutes) : 0;
-                    uptime = minutes + (hours * 60) + (days * 1440);
-                }
-            }
-        }
-        return uptime;
-    }
-
-    public static long getSystemUptime() throws IOException, ParseException {
+    public static long getSystemUptime(Machine machine) throws OSSUSNoAPIConnectionException {
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {
-            return getSystemUptimeWindows();
+            return getSystemUptimeWindows(machine);
         } else {
-            return getSystemUptimeOther();
+            return getSystemUptimeOther(machine);
         }
     }
 }

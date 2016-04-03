@@ -399,14 +399,6 @@ public final class Schedule {
 
             int exitCode = process.waitFor();
 
-            if (exitCode != 0) {
-                this.machine.logErrorMessage("Failed to execute command: "
-                        + cmd + " exit code: " + exitCode);
-                throw new OSSUSNoAPIConnectionException(
-                        "Failed to perform SQL backup"
-                );
-            }
-
             buf = new BufferedReader(inputStreamReader);
             String line;
 
@@ -417,6 +409,12 @@ public final class Schedule {
             if (!stringBuilder.toString().equals("")) {
                 this.machine.logErrorMessage("Result for cmd: " + cmd);
                 this.machine.logErrorMessage(stringBuilder.toString());
+            }
+
+            if (exitCode != 0) {
+                this.machine.logErrorMessage("Failed to execute command: "
+                        + cmd + " exit code: " + exitCode);
+                throw new OSSUSNoAPIConnectionException("Failed to perform SQL backup");
             }
 
         } catch (IOException | InterruptedException e) {
