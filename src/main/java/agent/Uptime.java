@@ -76,13 +76,13 @@ public class Uptime {
                         new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
                 )) {
                     String data = "";
+                    String line;
                     while (true) {
-                        final String line = in.readLine();
-                        if(line == null) {
+                        line = in.readLine();
+                        if ("".equals(line)) {
                             break;
                         }
-                        if (line.startsWith("Statistics since")
-                                || line.startsWith("Statistikk siden")) {
+                        if (line.startsWith("Statistics ") || line.startsWith("Statistikk ")) {
                             data = line;
                             break;
                         }
