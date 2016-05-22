@@ -75,12 +75,12 @@ public class Uptime {
                 try (BufferedReader in = new BufferedReader(
                         new InputStreamReader(uptimeProc.getInputStream(), StandardCharsets.UTF_8)
                 )) {
-                    String data = "";
+                    String data;
                     String line;
                     while (true) {
                         line = in.readLine();
                         if ("".equals(line)) {
-                            break;
+                            continue;
                         }
                         if (line.startsWith("Statistics since") || line.startsWith("Statistikk siden")) {
                             data = line;
