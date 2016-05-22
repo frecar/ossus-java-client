@@ -82,7 +82,7 @@ public class Uptime {
                         if ("".equals(line)) {
                             break;
                         }
-                        if (line.startsWith("Statistics ") || line.startsWith("Statistikk ")) {
+                        if (line.startsWith("Statistics since") || line.startsWith("Statistikk siden")) {
                             data = line;
                             break;
                         }
