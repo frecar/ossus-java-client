@@ -95,7 +95,9 @@ public class Uptime {
                             }
                         }
                     }
-                    machine.logErrorMessage("Unable to parse uptime information: " + data);
+                    if(uptime == 0) {
+                        machine.logErrorMessage("Unable to parse uptime information: " + data);
+                    }
                 }
             } else {
                 machine.logErrorMessage(
