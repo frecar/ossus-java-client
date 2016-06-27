@@ -10,7 +10,7 @@ import commons.exceptions.OSSUSNoFTPServerConnection;
 public class Agent {
 
     // Timeout Agent after 3 hours
-    static final int AGENT_TIMEOUT = 3 * 60 * 60 * 1000;
+    static final int AGENT_TIMEOUT = 10 * 60 * 60 * 1000;
 
     public static void main(
             final String[] args
