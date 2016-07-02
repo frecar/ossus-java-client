@@ -8,6 +8,7 @@ public final class Log {
 
     private final APIHandler apiHandler;
     private final String id;
+    private final Machine machine;
 
     private enum LogLevel {
         INFO("info"), ERROR("error"), WARNING("warning");
@@ -18,8 +19,9 @@ public final class Log {
         }
     }
 
-    public Log(final APIHandler apiHandler, final String id) {
+    public Log(final Machine machine, final APIHandler apiHandler, final String id) {
         this.apiHandler = apiHandler;
+        this.machine = machine;
         this.id = id;
     }
 
@@ -27,9 +29,12 @@ public final class Log {
             final String text,
             final LogLevel level
     ) throws OSSUSNoAPIConnectionException {
-        System.out.println("Level: " + level + " message: " + text);
+        System.out.println(
+            "Level: " + level + " Session: " + this.machine.session + " Message: " + text
+        );
         final HashMap<String, String> map = new HashMap<>();
         map.put("id", "" + id);
+        map.put("agent_session", "" + this.machine.session);
         map.put("type", "" + level.str);
         map.put("text", "" + text);
         this.apiHandler.setApiData("machines/" + id + "/create_log/", map);

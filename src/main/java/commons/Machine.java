@@ -62,7 +62,7 @@ public final class Machine {
         this.session = System.currentTimeMillis() / MILLISECONDS_DIVIDER;
 
         this.apiHandler = new APIHandler(this.serverIP + "/api/", apiUser, apiToken);
-        this.log = new Log(apiHandler, this.id);
+        this.log = new Log(this, apiHandler, this.id);
 
 
         if (!this.localTempFolder.endsWith(System.getProperty("file.separator"))) {
@@ -205,15 +205,16 @@ public final class Machine {
     }
 
     public void logInfoMessage(final String text) throws OSSUSNoAPIConnectionException {
-        this.log.logInfoMessage(session + ": " + text);
+        this.log.logInfoMessage(text);
     }
 
     public void logErrorMessage(final String text) throws OSSUSNoAPIConnectionException {
-        this.log.logErrorMessage(session + ": " + text);
+        this.log.logErrorMessage(text);
     }
 
     public void logWarningMessage(final String text) throws OSSUSNoAPIConnectionException {
-        this.log.logWarningMessage(session + ": " + text);
+        this.log.logWarningMessage(text);
     }
 
 }
+

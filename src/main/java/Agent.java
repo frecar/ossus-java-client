@@ -15,41 +15,58 @@ public class Agent {
     public static void main(
             final String[] args
     ) {
-        Thread thread = new Thread(new Runnable() {
+
+        final Machine machine = Agent.getMachine(args);
+
+        Thread agentThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                runMain(args);
+                runMain(machine);
             }
         });
-        thread.start();
+        agentThread.start();
+
         long endTimeMillis = System.currentTimeMillis() + AGENT_TIMEOUT;
-        while (thread.isAlive()) {
-            if (System.currentTimeMillis() > endTimeMillis) {
-                System.err.println("TIMED OUT AFTER " + AGENT_TIMEOUT + "ms");
-                System.exit(1);
-            }
+        while (agentThread.isAlive()) {
             try {
-                Thread.sleep(500);
-            } catch (InterruptedException ignored) {
+                if (System.currentTimeMillis() > endTimeMillis) {
+                    machine.logErrorMessage("TIMED OUT AFTER " + AGENT_TIMEOUT + "ms");
+                    System.exit(0);
+                }
+                try {
+                    runProgressReport(machine);
+                    Thread.sleep(3000);
+                } catch (InterruptedException ignored) {
+                    System.exit(0);
+                }
+            } catch (OSSUSNoAPIConnectionException e) {
+                System.err.println("Unable to connect to API");
+                System.exit(0);
             }
         }
+        System.exit(0);
+    }
+
+    public static void runProgressReport(
+            final Machine machine
+    ) throws OSSUSNoAPIConnectionException {
+        long seconds = System.currentTimeMillis() / 1000 - machine.session;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        String logText = seconds + " seconds";
+        if (minutes > 3) {
+            logText = minutes + " minutes";
+        }
+        if (minutes > 60) {
+            logText = hours + " hours";
+        }
+        machine.logInfoMessage("Agent has been running for " + logText);
     }
 
     public static void runMain(
-            final String[] args
+            final Machine machine
     ) {
         try {
-            String settingsLocation;
-
-            if (args.length > 0) {
-                settingsLocation = args[0];
-            } else {
-                String home = System.getProperty("user.home");
-                settingsLocation = home + "/.ossus_settings.json";
-            }
-
-            Machine machine = Agent.buildMachineFromSettings(settingsLocation);
-
             if (machine.isBusy()) {
                 machine.logWarningMessage("Agent: Machine busy, skipping!");
                 System.exit(0);
@@ -67,7 +84,6 @@ public class Agent {
                             + "the status should be busy by now.. but is not?");
                     return;
                 }
-
                 try {
                     machine.logInfoMessage("Starting to report machine stats");
                     reportMachineStats(machine);
@@ -96,6 +112,19 @@ public class Agent {
         } catch (Exception e) {
             System.err.println("Error occured: " + e.getMessage());
         }
+    }
+
+    private static Machine getMachine(
+            final String[] args
+    ) {
+        String settingsLocation;
+        if (args.length > 0) {
+            settingsLocation = args[0];
+        } else {
+            String home = System.getProperty("user.home");
+            settingsLocation = home + "/.ossus_settings.json";
+        }
+        return Agent.buildMachineFromSettings(settingsLocation);
     }
 
     private static void reportUptime(

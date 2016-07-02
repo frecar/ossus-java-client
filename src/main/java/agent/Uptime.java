@@ -82,7 +82,8 @@ public class Uptime {
                         if ("".equals(line)) {
                             continue;
                         }
-                        if (line.startsWith("Statistics since") || line.startsWith("Statistikk siden")) {
+                        if (line.startsWith("Statistics since")
+                                || line.startsWith("Statistikk siden")) {
                             data = line;
                             break;
                         }
@@ -95,7 +96,7 @@ public class Uptime {
                             }
                         }
                     }
-                    if(uptime == 0) {
+                    if (uptime == 0) {
                         machine.logErrorMessage("Unable to parse uptime information: " + data);
                     }
                 }
@@ -142,8 +143,7 @@ public class Uptime {
                     }
                 }
             } catch (IOException e) {
-                machine.logErrorMessage("Failed to parse uptime information");
-                machine.logErrorMessage(e.getMessage());
+                System.err.println(e.getMessage());
             }
         } else {
             machine.logErrorMessage(

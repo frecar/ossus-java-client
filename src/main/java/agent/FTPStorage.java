@@ -56,7 +56,8 @@ public final class FTPStorage {
         }
     }
 
-    private void ensureConnected() throws OSSUSNoFTPServerConnection, OSSUSNoAPIConnectionException {
+    private void ensureConnected()
+            throws OSSUSNoFTPServerConnection, OSSUSNoAPIConnectionException {
         this.machine.logInfoMessage("Verifying FTP Connection");
         if (this.client == null) {
             this.machine.logInfoMessage(
