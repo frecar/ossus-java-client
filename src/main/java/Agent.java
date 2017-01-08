@@ -11,8 +11,8 @@ import java.text.ParseException;
 
 public class Agent {
 
-    // Timeout Agent after 3 hours
-    static final int AGENT_TIMEOUT = 10 * 60 * 60 * 1000;
+    // Timeout Agent after 2 hours
+    static final int AGENT_TIMEOUT = 3600000;
 
     public static void main(
             final String[] args
@@ -76,47 +76,60 @@ public class Agent {
             final Machine machine
     ) {
         try {
-            if (machine.isBusy()) {
-                machine.logWarningMessage("Agent: Machine busy, skipping!");
-                System.exit(0);
+
+            int maxAttemptsToLock = 10;
+            int attempsToLock = 0;
+
+            boolean lockSet = machine.changesBusyStatus(true);
+            while (attempsToLock < maxAttemptsToLock && !lockSet) {
+                lockSet = machine.changesBusyStatus(true);
+                attempsToLock++;
+                if (lockSet) {
+                    machine.logInfoMessage("Agent: Set busy!");
+                } else {
+                    machine.logWarningMessage("Agent: Machine busy, waiting for 30 seconds!");
+                    try {
+                        Thread.sleep(30000);
+                    } catch (InterruptedException e) {
+                        machine.logErrorMessage("Agent: Exception occurred while waiting 30 seconds!");
+                        System.exit(0);
+                    }
+                }
+            }
+
+            if (!lockSet) {
+                machine.logWarningMessage("Agent: Giving up to lock the machine in this session, tried " + attempsToLock + " times.");
+                return;
+            }
+
+            if (!machine.isBusy()) {
+                machine.logErrorMessage("Agent: Something is wrong, "
+                        + "the status should be busy by now.. but it is not?");
+                return;
             }
 
             Agent.reportUptime(machine);
+            try {
+                machine.logInfoMessage("Starting to report machine stats");
+                reportMachineStats(machine);
 
-            machine.logInfoMessage("Checking if machine is busy, and set to busy if available");
+                machine.logInfoMessage("Starting updater");
+                new Updater(machine).run();
 
-            if (!machine.isBusy() && machine.changesBusyStatus(true)) {
-                machine.logInfoMessage("Agent: Set busy!");
+                machine.logInfoMessage("Starting to check for backup jobs to run");
+                new BackupJob(machine).runBackup();
 
-                if (!machine.isBusy()) {
-                    machine.logErrorMessage("Agent: Something is wrong, "
-                            + "the status should be busy by now.. but is not?");
-                    return;
+            } catch (OSSUSNoAPIConnectionException e) {
+                e.printStackTrace();
+            } catch (OSSUSNoFTPServerConnection | ParseException e2) {
+                machine.logErrorMessage(e2.getMessage());
+            } finally {
+                if (machine.changesBusyStatus(false)) {
+                    machine.logInfoMessage("Agent: Set not busy!");
+                } else {
+                    machine.logErrorMessage("Agent: Something is wrong! "
+                            + "The status should not have been not busy.");
                 }
-                try {
-                    machine.logInfoMessage("Starting to report machine stats");
-                    reportMachineStats(machine);
-
-                    machine.logInfoMessage("Starting updater");
-                    new Updater(machine).run();
-
-                    machine.logInfoMessage("Starting to check for backup jobs to run");
-                    new BackupJob(machine).runBackup();
-
-                } catch (OSSUSNoAPIConnectionException e) {
-                    e.printStackTrace();
-                } catch (OSSUSNoFTPServerConnection | ParseException e2) {
-                    machine.logErrorMessage(e2.getMessage());
-                } finally {
-                    if (machine.changesBusyStatus(false)) {
-                        machine.logInfoMessage("Agent: Set not busy!");
-                    } else {
-                        machine.logErrorMessage("Agent: Something is wrong! "
-                                + "The status should not have been not busy.");
-                    }
-                }
-            } else {
-                machine.logWarningMessage("Agent: Machine busy, skipping!");
             }
             machine.logInfoMessage("runMain thread completed");
         } catch (OSSUSNoAPIConnectionException e) {
@@ -141,7 +154,7 @@ public class Agent {
             final Machine machine
     ) throws
             OSSUSNoAPIConnectionException {
-        machine.logInfoMessage("Starting to report uptime");
+        machine.logInfoMessage("Reporting uptime");
         long uptime = Uptime.getSystemUptime(machine);
         machine.logInfoMessage("Reporting " + uptime + " minutes uptime");
         machine.apiHandler.getApiData("machines/" + machine.id + "/set_uptime/" + uptime);
