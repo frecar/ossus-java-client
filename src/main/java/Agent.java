@@ -6,6 +6,8 @@ import commons.Machine;
 import commons.exceptions.OSSUSNoAPIConnectionException;
 import commons.exceptions.OSSUSNoFTPServerConnection;
 
+import java.text.ParseException;
+
 
 public class Agent {
 
@@ -30,19 +32,26 @@ public class Agent {
         while (agentThread.isAlive()) {
             try {
                 if (System.currentTimeMillis() > endTimeMillis) {
-                    machine.logErrorMessage("TIMED OUT AFTER " + AGENT_TIMEOUT + "ms");
+                    machine.logErrorMessage("Timed out after " + AGENT_TIMEOUT + "ms");
                     System.exit(0);
                 }
                 try {
                     runProgressReport(machine);
-                    Thread.sleep(3000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException ignored) {
+                    machine.logErrorMessage("Failed to sleep main thread for 10 seconds");
+                    ignored.printStackTrace();
                     System.exit(0);
                 }
             } catch (OSSUSNoAPIConnectionException e) {
-                System.err.println("Unable to connect to API");
+                e.printStackTrace();
                 System.exit(0);
             }
+        }
+        try {
+            machine.logInfoMessage("Main thread completed");
+        } catch (OSSUSNoAPIConnectionException e) {
+            e.printStackTrace();
         }
         System.exit(0);
     }
@@ -96,8 +105,8 @@ public class Agent {
 
                 } catch (OSSUSNoAPIConnectionException e) {
                     e.printStackTrace();
-                } catch (OSSUSNoFTPServerConnection e) {
-                    machine.logErrorMessage(e.getMessage());
+                } catch (OSSUSNoFTPServerConnection | ParseException e2) {
+                    machine.logErrorMessage(e2.getMessage());
                 } finally {
                     if (machine.changesBusyStatus(false)) {
                         machine.logInfoMessage("Agent: Set not busy!");
@@ -109,7 +118,8 @@ public class Agent {
             } else {
                 machine.logWarningMessage("Agent: Machine busy, skipping!");
             }
-        } catch (Exception e) {
+            machine.logInfoMessage("runMain thread completed");
+        } catch (OSSUSNoAPIConnectionException e) {
             System.err.println("Error occured: " + e.getMessage());
         }
     }
@@ -141,7 +151,6 @@ public class Agent {
             final Machine machine
     ) throws
             OSSUSNoAPIConnectionException {
-
         try {
             MachineStats machinestats = new MachineStats(machine);
             machinestats.save();
@@ -149,10 +158,8 @@ public class Agent {
         } catch (Exception e) {
             machine.logErrorMessage("Failed to report machine stats");
             machine.logErrorMessage(e.getMessage());
-            e.printStackTrace();
             System.exit(0);
         }
-
     }
 
     private static Machine buildMachineFromSettings(

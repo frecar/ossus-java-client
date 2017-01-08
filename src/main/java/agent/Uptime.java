@@ -28,9 +28,6 @@ public class Uptime {
         try {
             boottime = format.parse(line);
         } catch (ParseException e) {
-            machine.logWarningMessage("Failed to parse uptime information");
-            machine.logWarningMessage("Date format: " + dateFormat);
-            machine.logWarningMessage("Line to parse: " + line);
             return 0;
         }
         return TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - boottime.getTime());
